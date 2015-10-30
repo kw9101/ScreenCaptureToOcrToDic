@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 
 namespace ScreenCaptureToOcrToDic
 {
@@ -11,6 +15,9 @@ namespace ScreenCaptureToOcrToDic
 
     class Program
     {
+        [DllImport("user32.dll")]
+        public static extern int WindowFromPoint(Point lpPoint);
+
         private static Timer aTimer;
 
         static void Main(string[] args)
@@ -31,7 +38,8 @@ namespace ScreenCaptureToOcrToDic
         {
             System.Drawing.Point mousePosition = Control.MousePosition;
 
-            Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}", e.SignalTime, mousePosition.X, mousePosition.Y);
+            var windowHandle = WindowFromPoint(mousePosition);
+            Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, windowHandle);
         }
     }
 }
