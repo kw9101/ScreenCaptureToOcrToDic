@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -18,12 +19,15 @@ namespace ScreenCaptureToOcrToDic
         [DllImport("user32.dll")]
         public static extern int WindowFromPoint(Point lpPoint);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
+
         private static Timer aTimer;
 
         static void Main(string[] args)
         {
             // 1초의 interval을 둔 timer 만들기
-            aTimer = new Timer(1000);
+            aTimer = new Timer(5000);
 
             // Hook up the Elapsed event for the timer.
             aTimer.Elapsed += OnTimedEvent;
@@ -38,8 +42,37 @@ namespace ScreenCaptureToOcrToDic
         {
             System.Drawing.Point mousePosition = Control.MousePosition;
 
-            var windowHandle = WindowFromPoint(mousePosition);
-            Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, windowHandle);
+            var hWnd = WindowFromPoint(mousePosition);
+            Rectangle lpRect;
+            var h = new System.IntPtr(hWnd);
+            GetWindowRect(h, out lpRect);
+
+            Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
+            Console.WriteLine("Rect {0}, {1}", lpRect.Left, lpRect.Width);
+
+            var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top);
+            // 캡쳐할 화면의 사이즈 만큼의 영역사이즈 만큼의 bitmap을 생성해줍니다.
+
+            var graphics = Graphics.FromImage(bitmap);
+            // bitmap이미지를 기반으로 Grapics객체를 생성합니다. 
+            // 이 클래스에 관해서는 C#부분에서 설명하도록 하겠습니다. (뭐 나도 공부하는거니깐 ㅠ)
+            graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top), new Point(0, 0), new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top));
+
+            // 실제로 캡쳐를 하는 부분입니다. 그래픽에서 제공하는 CopyFromScreen 메서드를 사용합니다. 
+            // 참고로 이 메서드는 " 픽셀의 사각형에 해당하는 색 데이터를 화면에서 
+            // Graphics의 그리기 화면으로 bitblt(bit - block transfer)합니다.
+            // 즉, 화면을 Graphics의 메모리에 다시 그려준다는 것이 되겠지요.
+
+            //PointToScreen - 특정 클라이언트 지점의 위치를 화면 좌표로 계산합니다. 
+            // form이 상속받은 control에 있는 함수입니다. 이 함수역시 C#에 올려놓도록 하겠슴당.
+            //         ...... 
+
+            // file을 저장하는 코드삽입
+            // 이 Graphics와 아까 bitmap을 연결했으니.. bitmap에서 제공되는 저장메서드를 이용해서 
+            //  원하는 위치에 따로 저장하면 끝입니다. ^^
+            bitmap.Save("test.png", ImageFormat.Png);
+            graphics.Dispose();
+
         }
     }
 }
