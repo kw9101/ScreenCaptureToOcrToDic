@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
+using Tesseract;
+using ImageFormat = System.Drawing.Imaging.ImageFormat;
 
 namespace ScreenCaptureToOcrToDic
 {
@@ -67,12 +69,25 @@ namespace ScreenCaptureToOcrToDic
             // form이 상속받은 control에 있는 함수입니다. 이 함수역시 C#에 올려놓도록 하겠슴당.
             //         ...... 
 
+            var testImagePath = "./test.png";
+
             // file을 저장하는 코드삽입
             // 이 Graphics와 아까 bitmap을 연결했으니.. bitmap에서 제공되는 저장메서드를 이용해서 
             //  원하는 위치에 따로 저장하면 끝입니다. ^^
-            bitmap.Save("test.png", ImageFormat.Png);
+            bitmap.Save(testImagePath, ImageFormat.Png);
             graphics.Dispose();
 
+            using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+            {
+                using (var img = Pix.LoadFromFile(testImagePath))
+                {
+                    using (var page = engine.Process(img))
+                    {
+                        var text = page.GetText();
+                        Console.WriteLine("OCR to Text : " + text);
+                    }
+                }
+            }
         }
     }
 }
