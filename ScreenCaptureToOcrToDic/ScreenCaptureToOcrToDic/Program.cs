@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
+using ImageProcessor;
+using ImageProcessor.Imaging;
 using Timer = System.Windows.Forms.Timer;
 using Tesseract;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
@@ -28,16 +30,46 @@ namespace ScreenCaptureToOcrToDic
 
         static void Main(string[] args)
         {
-            // 1초의 interval을 둔 timer 만들기
-            aTimer = new Timer(5000);
+            // http://imageprocessor.org/imageprocessor/imagefactory/resize/
 
-            // Hook up the Elapsed event for the timer.
-            aTimer.Elapsed += OnTimedEvent;
-            aTimer.Enabled = true;
+            //var imageFactor = new ImageFactory();
+            //imageFactor.Load("./test.png");
+            //var size = imageFactor.Image.Size;
+            ////size.Width *= 2;
+            ////size.Height *= 2;
+            ////imageFactor.Resize(size);
 
-            Console.WriteLine("Press the Enter key to exit the program... ");
-            Console.ReadLine();
-            Console.WriteLine("Terminating the application...");
+            //// imageFactor.DetectEdges()
+            //imageFactor.GaussianBlur(3);
+            ////imageFactor.Saturation(0);
+
+            //// imageFactor.GaussianSharpen(3);
+            //imageFactor.Save("./test2.png");
+
+            var testImagePath = "./test.png";
+
+            using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+            {
+                using (var img = Pix.LoadFromFile(testImagePath))
+                {
+                    using (var page = engine.Process(img))
+                    {
+                        var text = page.GetText();
+                        Console.WriteLine("OCR to Text : " + text);
+                    }
+                }
+            }
+
+            //// 1초의 interval을 둔 timer 만들기
+            //aTimer = new Timer(5000);
+
+            //// Hook up the Elapsed event for the timer.
+            //aTimer.Elapsed += OnTimedEvent;
+            //aTimer.Enabled = true;
+
+            //Console.WriteLine("Press the Enter key to exit the program... ");
+            //Console.ReadLine();
+            //Console.WriteLine("Terminating the application...");
         }
 
         private static void OnTimedEvent(object source, ElapsedEventArgs e)
@@ -69,7 +101,12 @@ namespace ScreenCaptureToOcrToDic
             // form이 상속받은 control에 있는 함수입니다. 이 함수역시 C#에 올려놓도록 하겠슴당.
             //         ...... 
 
-            var testImagePath = "./test.png";
+            var imageFactor = new ImageFactory();
+            imageFactor.Load("./test.png");
+            imageFactor.GaussianBlur(10);
+            imageFactor.Save("./test2.png");
+
+            var testImagePath = "./test2.png";
 
             // file을 저장하는 코드삽입
             // 이 Graphics와 아까 bitmap을 연결했으니.. bitmap에서 제공되는 저장메서드를 이용해서 
