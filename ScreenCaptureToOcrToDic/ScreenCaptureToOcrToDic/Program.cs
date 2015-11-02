@@ -32,17 +32,6 @@ namespace ScreenCaptureToOcrToDic
 
         static void Main(string[] args)
         {
-            var ie = new InternetExplorer();
-            var webBrowser = (IWebBrowserApp)ie;
-            webBrowser.Visible = true;
-
-            webBrowser.Navigate("http://www.google.com");
-
-            Thread.Sleep(5000);
-            webBrowser.Navigate("http://www.google.com");
-            Thread.Sleep(5000);
-            webBrowser.Quit();
-
             // http://imageprocessor.org/imageprocessor/imagefactory/resize/
 
             //var imageFactor = new ImageFactory();
@@ -74,20 +63,23 @@ namespace ScreenCaptureToOcrToDic
             //}
 
             // 1초의 interval을 둔 timer 만들기
-            //aTimer = new Timer(3000);
+            aTimer = new Timer(3000);
 
             //// Hook up the Elapsed event for the timer.
-            //aTimer.Elapsed += OnTimedEvent;
-            //aTimer.Enabled = true;
+            aTimer.Elapsed += OnTimedEvent;
+            aTimer.Enabled = true;
 
-            //Console.WriteLine("Press the Enter key to exit the program... ");
-            //Console.ReadLine();
-            //Console.WriteLine("Terminating the application...");
+            Console.WriteLine("Press the Enter key to exit the program... ");
+            Console.ReadLine();
+            Console.WriteLine("Terminating the application...");
         }
+
+        static InternetExplorer ie = new InternetExplorer();
+        private static string text = string.Empty;
 
         private static void OnTimedEvent(object source, ElapsedEventArgs e)
         {
-            System.Drawing.Point mousePosition = Control.MousePosition;
+            var mousePosition = Control.MousePosition;
 
             var hWnd = WindowFromPoint(mousePosition);
             Rectangle lpRect;
@@ -97,50 +89,53 @@ namespace ScreenCaptureToOcrToDic
             Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
             Console.WriteLine("Rect {0}, {1}", lpRect.Left, lpRect.Width);
 
-            var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top);
-            // 캡쳐할 화면의 사이즈 만큼의 영역사이즈 만큼의 bitmap을 생성해줍니다.
+            var testImagePath = "./test.png";
+            var testImagePath2 = "./test11.png";
 
+            var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 25);
             var graphics = Graphics.FromImage(bitmap);
-            // bitmap이미지를 기반으로 Grapics객체를 생성합니다. 
-            // 이 클래스에 관해서는 C#부분에서 설명하도록 하겠습니다. (뭐 나도 공부하는거니깐 ㅠ)
-            graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top), new Point(0, 0), new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top));
-
-            // 실제로 캡쳐를 하는 부분입니다. 그래픽에서 제공하는 CopyFromScreen 메서드를 사용합니다. 
-            // 참고로 이 메서드는 " 픽셀의 사각형에 해당하는 색 데이터를 화면에서 
-            // Graphics의 그리기 화면으로 bitblt(bit - block transfer)합니다.
-            // 즉, 화면을 Graphics의 메모리에 다시 그려준다는 것이 되겠지요.
-
-            //PointToScreen - 특정 클라이언트 지점의 위치를 화면 좌표로 계산합니다. 
-            // form이 상속받은 control에 있는 함수입니다. 이 함수역시 C#에 올려놓도록 하겠슴당.
-            //         ...... 
-
-            var imageFactor = new ImageFactory();
-            imageFactor.Load("./test.png");
-            imageFactor.GaussianBlur(10);
-            imageFactor.Save("./test2.png");
-
-            var testImagePath = "./test2.png";
-
-            // file을 저장하는 코드삽입
-            // 이 Graphics와 아까 bitmap을 연결했으니.. bitmap에서 제공되는 저장메서드를 이용해서 
-            //  원하는 위치에 따로 저장하면 끝입니다. ^^
+            graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top + 25), new Point(0, 0), new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 25));
             bitmap.Save(testImagePath, ImageFormat.Png);
             graphics.Dispose();
 
+            //var imageFactor = new ImageFactory();
+            //imageFactor.Load(testImagePath);
+            //var size = imageFactor.Image.Size;
+            //size.Width *= 2;
+            //size.Height *= 2;
+            //imageFactor.Resize(size);
+            //imageFactor.GaussianBlur(1);
+            //imageFactor.Save(testImagePath2);
+
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
             {
-                using (var img = Pix.LoadFromFile(testImagePath))
+                using (var img = Pix.LoadFromFile(testImagePath2))
                 {
                     using (var page = engine.Process(img))
                     {
-                        var text = page.GetText();
-                        Console.WriteLine("OCR to Text : \n" + text);
+                        var newText = page.GetText();
+                        newText = newText.Replace('\n', ' ');
+                        newText = newText.Replace('*', ' ');
+                        newText = newText.Replace('?', ' ');
+                        newText = newText.Trim();
 
-                        //var webBrower = new WebBrowser();
-                        var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=miniPopMain";
+                        if (newText != text)
+                        {
+                            text = newText;
 
-                        //webBrower.Navigate(target);
-                        System.Diagnostics.Process.Start(target);
+                            Console.WriteLine("OCR to Text : \n" + newText);
+
+                            var webBrowser = (IWebBrowserApp)ie;
+                            webBrowser.Visible = true;
+
+                            // var target = "http://translate.naver.com/#/en/ko/";
+                            var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
+                            //var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
+                            target += newText;
+
+                            webBrowser.Navigate(target);
+                            // webBrowser.Quit();
+                        }
                     }
                 }
             }
