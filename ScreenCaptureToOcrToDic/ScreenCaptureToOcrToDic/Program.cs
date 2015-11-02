@@ -5,6 +5,7 @@ using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
@@ -13,6 +14,7 @@ using ImageProcessor.Imaging;
 using Timer = System.Windows.Forms.Timer;
 using Tesseract;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
+using SHDocVw;
 
 namespace ScreenCaptureToOcrToDic
 {
@@ -30,38 +32,49 @@ namespace ScreenCaptureToOcrToDic
 
         static void Main(string[] args)
         {
+            var ie = new InternetExplorer();
+            var webBrowser = (IWebBrowserApp)ie;
+            webBrowser.Visible = true;
+
+            webBrowser.Navigate("http://www.google.com");
+
+            Thread.Sleep(5000);
+            webBrowser.Navigate("http://www.google.com");
+            Thread.Sleep(5000);
+            webBrowser.Quit();
+
             // http://imageprocessor.org/imageprocessor/imagefactory/resize/
 
             //var imageFactor = new ImageFactory();
             //imageFactor.Load("./test.png");
             //var size = imageFactor.Image.Size;
-            ////size.Width *= 2;
-            ////size.Height *= 2;
-            ////imageFactor.Resize(size);
+            //size.Width *= 2;
+            //size.Height *= 2;
+            //imageFactor.Resize(size);
 
-            //// imageFactor.DetectEdges()
+            ////// imageFactor.DetectEdges()
             //imageFactor.GaussianBlur(3);
-            ////imageFactor.Saturation(0);
+            //////imageFactor.Saturation(0);
 
-            //// imageFactor.GaussianSharpen(3);
+            ////// imageFactor.GaussianSharpen(3);
             //imageFactor.Save("./test2.png");
 
-            var testImagePath = "./test.png";
+            //var testImagePath = "./test2.png";
 
-            using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
-            {
-                using (var img = Pix.LoadFromFile(testImagePath))
-                {
-                    using (var page = engine.Process(img))
-                    {
-                        var text = page.GetText();
-                        Console.WriteLine("OCR to Text : " + text);
-                    }
-                }
-            }
+            //using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+            //{
+            //    using (var img = Pix.LoadFromFile(testImagePath))
+            //    {
+            //        using (var page = engine.Process(img))
+            //        {
+            //            var text = page.GetText();
+            //            Console.WriteLine("OCR to Text :\n" + text);
+            //        }
+            //    }
+            //}
 
-            //// 1초의 interval을 둔 timer 만들기
-            //aTimer = new Timer(5000);
+            // 1초의 interval을 둔 timer 만들기
+            //aTimer = new Timer(3000);
 
             //// Hook up the Elapsed event for the timer.
             //aTimer.Elapsed += OnTimedEvent;
@@ -121,7 +134,13 @@ namespace ScreenCaptureToOcrToDic
                     using (var page = engine.Process(img))
                     {
                         var text = page.GetText();
-                        Console.WriteLine("OCR to Text : " + text);
+                        Console.WriteLine("OCR to Text : \n" + text);
+
+                        //var webBrower = new WebBrowser();
+                        var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=miniPopMain";
+
+                        //webBrower.Navigate(target);
+                        System.Diagnostics.Process.Start(target);
                     }
                 }
             }
