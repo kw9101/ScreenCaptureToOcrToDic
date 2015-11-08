@@ -11,12 +11,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
-using ImageProcessor;
-using ImageProcessor.Imaging;
+using OpenCvSharp;
 using Timer = System.Windows.Forms.Timer;
 using Tesseract;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using SHDocVw;
+using Point = System.Drawing.Point;
+using Size = System.Drawing.Size;
 
 namespace ScreenCaptureToOcrToDic
 {
@@ -34,37 +35,6 @@ namespace ScreenCaptureToOcrToDic
         // [STAThread]
         static void Main(string[] args)
         {
-            
-            // http://imageprocessor.org/imageprocessor/imagefactory/resize/
-
-            //var imageFactor = new ImageFactory();
-            //imageFactor.Load("./test.png");
-            //var size = imageFactor.Image.Size;
-            //size.Width *= 2;
-            //size.Height *= 2;
-            //imageFactor.Resize(size);
-
-            ////// imageFactor.DetectEdges()
-            //imageFactor.GaussianBlur(3);
-            //////imageFactor.Saturation(0);
-
-            ////// imageFactor.GaussianSharpen(3);
-            //imageFactor.Save("./test2.png");
-
-            //var testImagePath = "./test2.png";
-
-            //using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
-            //{
-            //    using (var img = Pix.LoadFromFile(testImagePath))
-            //    {
-            //        using (var page = engine.Process(img))
-            //        {
-            //            var text = page.GetText();
-            //            Console.WriteLine("OCR to Text :\n" + text);
-            //        }
-            //    }
-            //}
-
             // 1초의 interval을 둔 timer 만들기
             aTimer = new Timer(3000);
 
@@ -77,7 +47,9 @@ namespace ScreenCaptureToOcrToDic
             Console.WriteLine("Terminating the application...");
         }
 
-        static InternetExplorer ie = new InternetExplorer();
+        static InternetExplorer googleIE = new InternetExplorer();
+        static InternetExplorer daumIE = new InternetExplorer();
+        static InternetExplorer naverIE = new InternetExplorer();
         private static string text = string.Empty;
 
         //[STAThread]
@@ -86,7 +58,7 @@ namespace ScreenCaptureToOcrToDic
             var mousePosition = Control.MousePosition;
 
             var hWnd = WindowFromPoint(mousePosition);
-            hWnd = 133776;
+            hWnd = 1249016;
             Rectangle lpRect;
             
             var h = new System.IntPtr(hWnd);
@@ -95,28 +67,24 @@ namespace ScreenCaptureToOcrToDic
             Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
             //Console.WriteLine("Rect {0}, {1}", lpRect.Left, lpRect.Width);
 
-            var testImagePath = "./test.png";
-            var testImagePath2 = "./test11.png";
+            var srcTestImagePath = "./test.png";
+            var dstTestImagePath = "./test1.png";
 
             var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 25);
             var graphics = Graphics.FromImage(bitmap);
             graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top + 25), new Point(0, 0), new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 25));
-            bitmap.Save(testImagePath, ImageFormat.Png);
+            bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
-            //var imageFactor = new ImageFactory();
-            //imageFactor.Load(testImagePath);
-            //var size = imageFactor.Image.Size;
-            //size.Width *= 2;
-            //size.Height *= 2;
-            //imageFactor.Resize(size);
-            //imageFactor.GaussianBlur(1);
-            //// imageFactor.GaussianSharpen(1);
-            //imageFactor.Save(testImagePath2);
+
+            var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
+            var dst = new Mat(new int[] { src.Width, src.Height }, MatType.CV_8U);
+            Cv2.Threshold(src, dst, 254, 255, ThresholdTypes.Binary);
+            Cv2.ImWrite(dstTestImagePath, dst);
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
             {
-                using (var img = Pix.LoadFromFile(testImagePath))
+                using (var img = Pix.LoadFromFile(srcTestImagePath))
                 {
                     using (var page = engine.Process(img))
                     {
@@ -134,17 +102,6 @@ namespace ScreenCaptureToOcrToDic
                         newText = Regex.Replace(newText, @"\s+", " ");  // 스페이스 여러개는 하나로 합침
                         newText = newText.Trim();
                         Console.WriteLine("after filter  : " + newText);
-                        //newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z][^a-zA-Z\s]", "");
-                        //newText = Regex.Replace(newText, @"([a-zA-Z]+)7", "$1?");
-                        //newText = Regex.Replace(newText, @"1([a-zA-Z]+)", "l$1");
-                        //newText = Regex.Replace(newText, @"([a-zA-Z]+)1", "$11");
-
-                        //newText = Regex.Replace(newText, "[^a-zA-Z -'!.][a-zA-Z][^a-zA-Z -'!.]", "");
-                        //newText = Regex.Replace(newText, "[^a-zA-Z -'!.]", "");
-
-                        //newText = Regex.Replace(newText, @"\s+", " ");
-                        //newText = Regex.Replace(newText, "[^a-zA-Z -'!.]{2,}", "");
-                        //newText = Regex.Replace(newText, " [b-zA-HJ-Z -'!.] ", "");
 
                         if (newText != text)
                         {
@@ -153,18 +110,29 @@ namespace ScreenCaptureToOcrToDic
                             Console.WriteLine("\n\nOCR to Text : \n" + text);
 
                             Console.WriteLine(0);
-                            var webBrowser = (IWebBrowserApp)ie;
-                            webBrowser.Visible = true;
 
-                            // var target = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
-                            var target = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
+                            //var googleWebBrowser = (IWebBrowserApp)googleIE;
+                            //googleWebBrowser.Visible = true;
+
+                            //var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
+                            //googleWebBrowser.Navigate(googleTarget);
+
+                            var daumWebBrowser = (IWebBrowserApp) daumIE;
+                            daumWebBrowser.Visible = true;
+                            var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
+                            daumWebBrowser.Navigate(daumTarget);
+
+                            //var naverWebBrowser = (IWebBrowserApp)naverIE;
+                            //naverWebBrowser.Visible = true;
+                            //var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
+                            //naverWebBrowser.Navigate(naverTarget);
+                            
                             // var target = "http://translate.naver.com/#/en/ko/";
                             // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
                             // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
                             // target += text + @"&t=word&dic=eng";
 
                             //Console.WriteLine(target);
-                            webBrowser.Navigate(target);
                             // webBrowser.Quit();
                         }
                     }
