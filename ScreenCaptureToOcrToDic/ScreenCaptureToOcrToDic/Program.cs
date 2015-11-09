@@ -36,7 +36,7 @@ namespace ScreenCaptureToOcrToDic
         static void Main(string[] args)
         {
             // 1초의 interval을 둔 timer 만들기
-            aTimer = new Timer(3000);
+            aTimer = new Timer(5000);
 
             //// Hook up the Elapsed event for the timer.
             aTimer.Elapsed += OnTimedEvent;
@@ -52,16 +52,31 @@ namespace ScreenCaptureToOcrToDic
         static InternetExplorer naverIE = new InternetExplorer();
         private static string text = string.Empty;
 
+        // http://stackoverflow.com/questions/13547639/return-window-handle-by-its-name-title
+        public static IntPtr WinGetHandle(string wName)
+        {
+            var hWnd = IntPtr.Zero;
+            foreach (var pList in Process.GetProcesses())
+            {
+                Console.WriteLine(pList.MainWindowTitle + " : " + pList.MainWindowHandle);
+                if (pList.MainWindowTitle.Contains(wName))
+                {
+                    hWnd = pList.MainWindowHandle;
+                }
+            }
+            return hWnd; //Should contain the handle but may be zero if the title doesn't match
+        }
+
         //[STAThread]
         private static void OnTimedEvent(object source, ElapsedEventArgs e)
         {
             var mousePosition = Control.MousePosition;
 
             var hWnd = WindowFromPoint(mousePosition);
-            hWnd = 1249016;
+            hWnd = 67624;
             Rectangle lpRect;
             
-            var h = new System.IntPtr(hWnd);
+            var h = new IntPtr(hWnd);
             GetWindowRect(h, out lpRect);
 
             Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
@@ -70,9 +85,9 @@ namespace ScreenCaptureToOcrToDic
             var srcTestImagePath = "./test.png";
             var dstTestImagePath = "./test1.png";
 
-            var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 25);
+            var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 30);
             var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top + 25), new Point(0, 0), new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 25));
+            graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top + 30), new Point(0, 0), new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 30));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
@@ -84,7 +99,7 @@ namespace ScreenCaptureToOcrToDic
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
             {
-                using (var img = Pix.LoadFromFile(srcTestImagePath))
+                using (var img = Pix.LoadFromFile(dstTestImagePath))
                 {
                     using (var page = engine.Process(img))
                     {
@@ -111,22 +126,22 @@ namespace ScreenCaptureToOcrToDic
 
                             Console.WriteLine(0);
 
-                            //var googleWebBrowser = (IWebBrowserApp)googleIE;
-                            //googleWebBrowser.Visible = true;
+                            var googleWebBrowser = (IWebBrowserApp)googleIE;
+                            googleWebBrowser.Visible = true;
 
-                            //var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
-                            //googleWebBrowser.Navigate(googleTarget);
+                            var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
+                            googleWebBrowser.Navigate(googleTarget);
 
                             var daumWebBrowser = (IWebBrowserApp) daumIE;
                             daumWebBrowser.Visible = true;
                             var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
                             daumWebBrowser.Navigate(daumTarget);
 
-                            //var naverWebBrowser = (IWebBrowserApp)naverIE;
-                            //naverWebBrowser.Visible = true;
-                            //var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
-                            //naverWebBrowser.Navigate(naverTarget);
-                            
+                            var naverWebBrowser = (IWebBrowserApp)naverIE;
+                            naverWebBrowser.Visible = true;
+                            var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
+                            naverWebBrowser.Navigate(naverTarget);
+
                             // var target = "http://translate.naver.com/#/en/ko/";
                             // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
                             // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
