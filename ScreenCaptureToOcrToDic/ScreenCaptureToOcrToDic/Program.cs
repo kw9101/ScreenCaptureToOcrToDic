@@ -16,6 +16,7 @@ using Timer = System.Windows.Forms.Timer;
 using Tesseract;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using SHDocVw;
+using Utilities;
 using Point = System.Drawing.Point;
 using Size = System.Drawing.Size;
 
@@ -25,6 +26,17 @@ namespace ScreenCaptureToOcrToDic
 
     class Program
     {
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new Form1());
+        }
+
         [DllImport("user32.dll")]
         public static extern int WindowFromPoint(Point lpPoint);
 
@@ -33,18 +45,35 @@ namespace ScreenCaptureToOcrToDic
 
         private static Timer aTimer;
         // [STAThread]
-        static void Main(string[] args)
+        //static void Main(string[] args)
+        //{
+        //    globalKeyboardHook gkh = new globalKeyboardHook();
+        //    gkh.HookedKeys.Add(Keys.A);
+        //    gkh.KeyDown += new KeyEventHandler(gkh_KeyDown);
+        //    gkh.KeyUp += new KeyEventHandler(gkh_KeyUp);
+
+        //    // 1초의 interval을 둔 timer 만들기
+        //    aTimer = new Timer(5000);
+
+        //    //// Hook up the Elapsed event for the timer.
+        //    aTimer.Elapsed += OnTimedEvent;
+        //    aTimer.Enabled = true;
+
+        //    Console.WriteLine("Press the Enter key to exit the program... ");
+        //    Console.ReadLine();
+        //    Console.WriteLine("Terminating the application...");
+        //}
+
+        static void gkh_KeyUp(object sender, KeyEventArgs e)
         {
-            // 1초의 interval을 둔 timer 만들기
-            aTimer = new Timer(5000);
+            Console.WriteLine("Up\t" + e.KeyCode.ToString());
+            e.Handled = true;
+        }
 
-            //// Hook up the Elapsed event for the timer.
-            aTimer.Elapsed += OnTimedEvent;
-            aTimer.Enabled = true;
-
-            Console.WriteLine("Press the Enter key to exit the program... ");
-            Console.ReadLine();
-            Console.WriteLine("Terminating the application...");
+        static void gkh_KeyDown(object sender, KeyEventArgs e)
+        {
+            Console.WriteLine("Down\t" + e.KeyCode.ToString());
+            e.Handled = true;
         }
 
         static InternetExplorer googleIE = new InternetExplorer();
