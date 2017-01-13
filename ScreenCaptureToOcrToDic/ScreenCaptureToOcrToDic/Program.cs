@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 using System.Windows.Input;
 using Tesseract;
@@ -42,6 +43,18 @@ namespace ScreenCaptureToOcrToDic
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [DllImport("User32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern long GetWindowText(IntPtr hwnd, StringBuilder lpString, long cch);
+
+        [DllImport("User32.dll")]
+        static extern IntPtr GetParent(IntPtr hwnd);
+
+        [DllImport("User32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern long GetClassName(IntPtr hwnd, StringBuilder lpClassName, long nMaxCount);
 
         private static void GkhKeyUp(object sender, KeyEventArgs e)
         {
@@ -117,6 +130,18 @@ namespace ScreenCaptureToOcrToDic
 
             var h = new IntPtr(hWnd);
             GetWindowRect(h, out lpRect);
+
+
+            var maxLength = GetWindowTextLength(h);
+            var windowText = new StringBuilder("", maxLength + 5);
+            GetWindowText(h, windowText, maxLength + 2);
+
+            var caption = windowText.ToString();
+            if (caption != "Render")
+            {
+                Console.WriteLine("Caption: " + caption);
+                return;
+            }
 
             // Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
             //Console.WriteLine("Rect {0}, {1}", lpRect.Left, lpRect.Width);
