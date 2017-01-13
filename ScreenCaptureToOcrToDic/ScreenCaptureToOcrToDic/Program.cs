@@ -108,15 +108,12 @@ namespace ScreenCaptureToOcrToDic
                 switch (e.KeyCode)
                 {
                     case Keys.Up:
-
+                        GetValue(0.47f, 0.1f, 0.57f);
                         break;
                     case Keys.Down:
-                        break;
-                    default:
+                        GetValue(0.47f, 0.57f, 0.09f);
                         break;
                 }
-
-                GetValue();
             }
 
 
@@ -144,13 +141,13 @@ namespace ScreenCaptureToOcrToDic
         }
 
         //[STAThread]
-        [SuppressMessage("ReSharper", "InvertIf")]
-        private static void OnTimedEvent(object source, ElapsedEventArgs e)
-        {
-            GetValue();
-        }
+        //[SuppressMessage("ReSharper", "InvertIf")]
+        //private static void OnTimedEvent(object source, ElapsedEventArgs e)
+        //{
+        //    GetValue();
+        //}
 
-        private static void GetValue()
+        private static void GetValue(float crapHRatio, float crapTopRatio, float crapBottomRatio)
         {
             var mousePosition = Control.MousePosition;
 
@@ -167,10 +164,9 @@ namespace ScreenCaptureToOcrToDic
             const string srcTestImagePath = "./test.png";
             const string dstTestImagePath = "./test1.png";
 
-            const float crapHRatio = 0.47f;
             var crapH = (int) (lpRect.Width*crapHRatio);
-            var crapTop = (int)(lpRect.Height * 0.57f);
-            var crapBottom = (int) (lpRect.Height*0.09f);
+            var crapTop = (int)(lpRect.Height * crapTopRatio);
+            var crapBottom = (int) (lpRect.Height * crapBottomRatio);
             var bitmap = new Bitmap(lpRect.Width - lpRect.Left + crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom));
             var graphics = Graphics.FromImage(bitmap);
             graphics.CopyFromScreen(new Point(lpRect.Left - (crapH / 2), lpRect.Top + crapTop), new Point(0, 0), new Size(lpRect.Width - lpRect.Left - crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom)));
@@ -182,65 +178,65 @@ namespace ScreenCaptureToOcrToDic
             //Cv2.Threshold(src, dst, 254, 255, ThresholdTypes.Binary);
             //Cv2.ImWrite(dstTestImagePath, dst);
 
-            return;
-            //using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
-            //{
-            //    // using (var img = Pix.LoadFromFile(dstTestImagePath))
-            //    using (var img = Pix.LoadFromFile(srcTestImagePath))
-            //    {
-            //        using (var page = engine.Process(img))
-            //        {
-            //            var newText = page.GetText();
-            //            var origin = newText;
-            //            newText = newText.Replace('\n', ' ');
+            // return;
+            using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
+            {
+                // using (var img = Pix.LoadFromFile(dstTestImagePath))
+                using (var img = Pix.LoadFromFile(srcTestImagePath))
+                {
+                    using (var page = engine.Process(img))
+                    {
+                        var newText = page.GetText();
+                        var origin = newText;
+                        newText = newText.Replace('\n', ' ');
 
-            //            newText = newText.Replace('1', 'l');
-            //            Console.WriteLine("before filter : " + newText);
-            //            // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
-            //            newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+",
-            //                "");
-            //            newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
-            //            newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
-            //            newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
-            //            newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
-            //            newText = newText.Trim();
-            //            Console.WriteLine("after filter  : " + newText);
+                        newText = newText.Replace('1', 'l');
+                        Console.WriteLine("before filter : " + newText);
+                        // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
+                        newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+",
+                            "");
+                        newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
+                        newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
+                        newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
+                        newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
+                        newText = newText.Trim();
+                        Console.WriteLine("after filter  : " + newText);
 
-            //            if (newText != text)
-            //            {
-            //                text = newText;
-            //                Console.WriteLine("Origin : \n" + origin);
-            //                Console.WriteLine("\n\nOCR to Text : \n" + text);
+                        //if (newText != text)
+                        //{
+                        //    text = newText;
+                        //    Console.WriteLine("Origin : \n" + origin);
+                        //    Console.WriteLine("\n\nOCR to Text : \n" + text);
 
-            //                Console.WriteLine(0);
+                        //    Console.WriteLine(0);
 
-            //                var googleWebBrowser = (IWebBrowserApp) GoogleIe;
-            //                googleWebBrowser.Visible = true;
+                        //    var googleWebBrowser = (IWebBrowserApp)GoogleIe;
+                        //    googleWebBrowser.Visible = true;
 
-            //                var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
-            //                googleWebBrowser.Navigate(googleTarget);
+                        //    var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
+                        //    googleWebBrowser.Navigate(googleTarget);
 
-            //                var daumWebBrowser = (IWebBrowserApp) DaumIe;
-            //                daumWebBrowser.Visible = true;
-            //                var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
-            //                daumWebBrowser.Navigate(daumTarget);
+                        //    var daumWebBrowser = (IWebBrowserApp)DaumIe;
+                        //    daumWebBrowser.Visible = true;
+                        //    var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
+                        //    daumWebBrowser.Navigate(daumTarget);
 
-            //                var naverWebBrowser = (IWebBrowserApp) NaverIe;
-            //                naverWebBrowser.Visible = true;
-            //                var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
-            //                naverWebBrowser.Navigate(naverTarget);
+                        //    var naverWebBrowser = (IWebBrowserApp)NaverIe;
+                        //    naverWebBrowser.Visible = true;
+                        //    var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
+                        //    naverWebBrowser.Navigate(naverTarget);
 
-            //                // var target = "http://translate.naver.com/#/en/ko/";
-            //                // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
-            //                // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
-            //                // target += text + @"&t=word&dic=eng";
+                        //    // var target = "http://translate.naver.com/#/en/ko/";
+                        //    // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
+                        //    // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
+                        //    // target += text + @"&t=word&dic=eng";
 
-            //                //Console.WriteLine(target);
-            //                // webBrowser.Quit();
-            //            }
-            //        }
-            //    }
-            //}
+                        //    //Console.WriteLine(target);
+                        //    // webBrowser.Quit();
+                        //}
+                    }
+                }
+            }
         }
     }
 }
