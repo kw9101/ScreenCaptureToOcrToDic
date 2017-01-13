@@ -123,10 +123,10 @@ namespace ScreenCaptureToOcrToDic
             e.Handled = true;
         }
 
-        private static readonly InternetExplorer GoogleIe = new InternetExplorer();
-        private static readonly InternetExplorer DaumIe = new InternetExplorer();
-        private static readonly InternetExplorer NaverIe = new InternetExplorer();
-        private static string text = string.Empty;
+        //private static readonly InternetExplorer GoogleIe = new InternetExplorer();
+        //private static readonly InternetExplorer DaumIe = new InternetExplorer();
+        //private static readonly InternetExplorer NaverIe = new InternetExplorer();
+        //private static string text = string.Empty;
 
         // http://stackoverflow.com/questions/13547639/return-window-handle-by-its-name-title
         public static IntPtr WinGetHandle(string wName)
@@ -167,75 +167,80 @@ namespace ScreenCaptureToOcrToDic
             const string srcTestImagePath = "./test.png";
             const string dstTestImagePath = "./test1.png";
 
-            var bitmap = new Bitmap(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 30);
+            const float crapHRatio = 0.47f;
+            var crapH = (int) (lpRect.Width*crapHRatio);
+            var crapTop = (int)(lpRect.Height * 0.57f);
+            var crapBottom = (int) (lpRect.Height*0.09f);
+            var bitmap = new Bitmap(lpRect.Width - lpRect.Left + crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom));
             var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen(new Point(lpRect.Left, lpRect.Top + 30), new Point(0, 0),
-                new Size(lpRect.Width - lpRect.Left, lpRect.Height - lpRect.Top - 30));
+            graphics.CopyFromScreen(new Point(lpRect.Left - (crapH / 2), lpRect.Top + crapTop), new Point(0, 0), new Size(lpRect.Width - lpRect.Left - crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom)));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
-            var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
-            var dst = new Mat(new int[] {src.Width, src.Height}, MatType.CV_8U);
-            Cv2.Threshold(src, dst, 254, 255, ThresholdTypes.Binary);
-            Cv2.ImWrite(dstTestImagePath, dst);
+            //var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
+            //var dst = new Mat(new int[] {src.Width, src.Height}, MatType.CV_8U);
+            //Cv2.Threshold(src, dst, 254, 255, ThresholdTypes.Binary);
+            //Cv2.ImWrite(dstTestImagePath, dst);
 
-            using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
-            {
-                using (var img = Pix.LoadFromFile(dstTestImagePath))
-                {
-                    using (var page = engine.Process(img))
-                    {
-                        var newText = page.GetText();
-                        var origin = newText;
-                        newText = newText.Replace('\n', ' ');
+            return;
+            //using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
+            //{
+            //    // using (var img = Pix.LoadFromFile(dstTestImagePath))
+            //    using (var img = Pix.LoadFromFile(srcTestImagePath))
+            //    {
+            //        using (var page = engine.Process(img))
+            //        {
+            //            var newText = page.GetText();
+            //            var origin = newText;
+            //            newText = newText.Replace('\n', ' ');
 
-                        newText = newText.Replace('1', 'l');
-                        Console.WriteLine("before filter : " + newText);
-                        // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
-                        newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+",
-                            "");
-                        newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
-                        newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
-                        newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
-                        newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
-                        newText = newText.Trim();
-                        Console.WriteLine("after filter  : " + newText);
+            //            newText = newText.Replace('1', 'l');
+            //            Console.WriteLine("before filter : " + newText);
+            //            // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
+            //            newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+",
+            //                "");
+            //            newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
+            //            newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
+            //            newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
+            //            newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
+            //            newText = newText.Trim();
+            //            Console.WriteLine("after filter  : " + newText);
 
-                        if (newText != text)
-                        {
-                            text = newText;
-                            Console.WriteLine("Origin : \n" + origin);
-                            Console.WriteLine("\n\nOCR to Text : \n" + text);
+            //            if (newText != text)
+            //            {
+            //                text = newText;
+            //                Console.WriteLine("Origin : \n" + origin);
+            //                Console.WriteLine("\n\nOCR to Text : \n" + text);
 
-                            Console.WriteLine(0);
+            //                Console.WriteLine(0);
 
-                            var googleWebBrowser = (IWebBrowserApp) GoogleIe;
-                            googleWebBrowser.Visible = true;
+            //                var googleWebBrowser = (IWebBrowserApp) GoogleIe;
+            //                googleWebBrowser.Visible = true;
 
-                            var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
-                            googleWebBrowser.Navigate(googleTarget);
+            //                var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
+            //                googleWebBrowser.Navigate(googleTarget);
 
-                            var daumWebBrowser = (IWebBrowserApp) DaumIe;
-                            daumWebBrowser.Visible = true;
-                            var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
-                            daumWebBrowser.Navigate(daumTarget);
+            //                var daumWebBrowser = (IWebBrowserApp) DaumIe;
+            //                daumWebBrowser.Visible = true;
+            //                var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
+            //                daumWebBrowser.Navigate(daumTarget);
 
-                            var naverWebBrowser = (IWebBrowserApp) NaverIe;
-                            naverWebBrowser.Visible = true;
-                            var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
-                            naverWebBrowser.Navigate(naverTarget);
+            //                var naverWebBrowser = (IWebBrowserApp) NaverIe;
+            //                naverWebBrowser.Visible = true;
+            //                var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
+            //                naverWebBrowser.Navigate(naverTarget);
 
-                            // var target = "http://translate.naver.com/#/en/ko/";
-                            // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
-                            // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
-                            // target += text + @"&t=word&dic=eng";
+            //                // var target = "http://translate.naver.com/#/en/ko/";
+            //                // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
+            //                // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
+            //                // target += text + @"&t=word&dic=eng";
 
-                            //Console.WriteLine(target);
-                            // webBrowser.Quit();
-                        }
-                    }
-                }
-            }
+            //                //Console.WriteLine(target);
+            //                // webBrowser.Quit();
+            //            }
+            //        }
+            //    }
+            //}
         }
     }
 }
