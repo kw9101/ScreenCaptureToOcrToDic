@@ -1,42 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Timers;
 using System.Windows.Forms;
-using OpenCvSharp;
-using Timer = System.Windows.Forms.Timer;
+using System.Windows.Input;
 using Tesseract;
-using ImageFormat = System.Drawing.Imaging.ImageFormat;
-using SHDocVw;
 using Utilities;
-using Point = System.Drawing.Point;
-using Size = System.Drawing.Size;
+using ImageFormat = System.Drawing.Imaging.ImageFormat;
+using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 
 namespace ScreenCaptureToOcrToDic
 {
-    using System.Timers;
-
-    class Program
+    internal class Program
     {
+        // 키를 누르고 있을 때 연속으로 눌리지 않게 하기 위한 꼼수.
+        private static readonly Dictionary<Keys, bool> IsPresss = new Dictionary<Keys, bool>();
+
         /// <summary>
-        /// The main entry point for the application.
+        ///     The main entry point for the application.
         /// </summary>
-        // [STAThread]
         private static void Main()
         {
             // keyboard hook 초기화및 셋팅
             var gkh = new globalKeyboardHook();
-            gkh.HookedKeys.Add(Keys.Up);
-            gkh.HookedKeys.Add(Keys.Down);
+           
+            gkh.HookedKeys.Add(Keys.A);
+            gkh.HookedKeys.Add(Keys.Z);
+            gkh.HookedKeys.Add(Keys.LShiftKey);
+            gkh.HookedKeys.Add(Keys.LControlKey);
             gkh.KeyDown += GkhKeyDown;
             gkh.KeyUp += GkhKeyUp;
 
@@ -51,41 +43,16 @@ namespace ScreenCaptureToOcrToDic
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
-        private static Timer aTimer;
-
-        // [STAThread]
-        //static void Main(string[] args)
-        //{
-        //    globalKeyboardHook gkh = new globalKeyboardHook();
-        //    gkh.HookedKeys.Add(Keys.A);
-        //    gkh.KeyDown += new KeyEventHandler(GkhKeyDown);
-        //    gkh.KeyUp += new KeyEventHandler(GkhKeyUp);
-
-        //    // 1초의 interval을 둔 timer 만들기
-        //    aTimer = new Timer(5000);
-
-        //    //// Hook up the Elapsed event for the timer.
-        //    aTimer.Elapsed += OnTimedEvent;
-        //    aTimer.Enabled = true;
-
-        //    Console.WriteLine("Press the Enter key to exit the program... ");
-        //    Console.ReadLine();
-        //    Console.WriteLine("Terminating the application...");
-        //}
-
-        // 키를 누르고 있을 때 연속으로 눌리지 않게 하기 위한 꼼수.
-        private static readonly Dictionary<Keys, bool> IsPresss = new Dictionary<Keys, bool>();
-
         private static void GkhKeyUp(object sender, KeyEventArgs e)
         {
-            Console.WriteLine("Up\t" + e.KeyCode);
+            //Console.WriteLine("Up\t" + e.KeyCode);
 
             if (IsPresss.ContainsKey(e.KeyCode))
             {
                 IsPresss[e.KeyCode] = false;
             }
 
-            e.Handled = true;
+            e.Handled = false;
         }
 
         private static void GkhKeyDown(object sender, KeyEventArgs e)
@@ -96,34 +63,33 @@ namespace ScreenCaptureToOcrToDic
                 IsPresss.Add(e.KeyCode, true);
                 isPress = false;
             }
-            else
-            {
-                IsPresss[e.KeyCode] = true;
-            }
+
+            IsPresss[e.KeyCode] = true;
 
             if (isPress == false)
             {
-                Console.WriteLine("Down\t" + e.KeyCode);
+                bool isPressLShiftKey;
+                IsPresss.TryGetValue(Keys.LControlKey, out isPressLShiftKey);
+                bool isPressLControlKey;
+                IsPresss.TryGetValue(Keys.LControlKey, out isPressLControlKey);
 
-                switch (e.KeyCode)
+                if (isPressLShiftKey && isPressLControlKey)
                 {
-                    case Keys.Up:
-                        GetValue(0.47f, 0.1f, 0.57f);
-                        break;
-                    case Keys.Down:
-                        GetValue(0.47f, 0.57f, 0.09f);
-                        break;
+                    switch (e.KeyCode)
+                    {
+                        case Keys.A:
+                            GetValue(0.47f, 0.1f, 0.57f);
+                            break;
+                        case Keys.Z:
+                            GetValue(0.47f, 0.57f, 0.09f);
+                            break;
+                    }
                 }
             }
 
-
-            e.Handled = true;
+            // Console.WriteLine("Down\t" + e.KeyCode);
+            e.Handled = false;
         }
-
-        //private static readonly InternetExplorer GoogleIe = new InternetExplorer();
-        //private static readonly InternetExplorer DaumIe = new InternetExplorer();
-        //private static readonly InternetExplorer NaverIe = new InternetExplorer();
-        //private static string text = string.Empty;
 
         // http://stackoverflow.com/questions/13547639/return-window-handle-by-its-name-title
         public static IntPtr WinGetHandle(string wName)
@@ -137,15 +103,9 @@ namespace ScreenCaptureToOcrToDic
                     hWnd = pList.MainWindowHandle;
                 }
             }
+
             return hWnd; //Should contain the handle but may be zero if the title doesn't match
         }
-
-        //[STAThread]
-        //[SuppressMessage("ReSharper", "InvertIf")]
-        //private static void OnTimedEvent(object source, ElapsedEventArgs e)
-        //{
-        //    GetValue();
-        //}
 
         private static void GetValue(float crapHRatio, float crapTopRatio, float crapBottomRatio)
         {
@@ -165,11 +125,13 @@ namespace ScreenCaptureToOcrToDic
             const string dstTestImagePath = "./test1.png";
 
             var crapH = (int) (lpRect.Width*crapHRatio);
-            var crapTop = (int)(lpRect.Height * crapTopRatio);
-            var crapBottom = (int) (lpRect.Height * crapBottomRatio);
-            var bitmap = new Bitmap(lpRect.Width - lpRect.Left + crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom));
+            var crapTop = (int) (lpRect.Height*crapTopRatio);
+            var crapBottom = (int) (lpRect.Height*crapBottomRatio);
+            var bitmap = new Bitmap(lpRect.Width - lpRect.Left + crapH,
+                lpRect.Height - lpRect.Top - (crapTop + crapBottom));
             var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen(new Point(lpRect.Left - (crapH / 2), lpRect.Top + crapTop), new Point(0, 0), new Size(lpRect.Width - lpRect.Left - crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom)));
+            graphics.CopyFromScreen(new Point(lpRect.Left - crapH/2, lpRect.Top + crapTop), new Point(0, 0),
+                new Size(lpRect.Width - lpRect.Left - crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom)));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
@@ -187,53 +149,30 @@ namespace ScreenCaptureToOcrToDic
                     using (var page = engine.Process(img))
                     {
                         var newText = page.GetText();
-                        var origin = newText;
-                        newText = newText.Replace('\n', ' ');
 
-                        newText = newText.Replace('1', 'l');
-                        Console.WriteLine("before filter : " + newText);
-                        // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
-                        newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+",
-                            "");
-                        newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
-                        newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
-                        newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
-                        newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
+                        // url에 맞게 문자코드 수정
                         newText = newText.Trim();
-                        Console.WriteLine("after filter  : " + newText);
+                        newText = newText.Replace('\n', ' ');
+                        Console.WriteLine("Text: " + newText);
+                        newText = newText.Replace(" ", "%20");
+                        newText = newText.Replace(@"""", "%22");
+                        newText = @"%22" + newText + @"%22";
+                        // newText = newText.Replace('1', 'l');
+                        //Console.WriteLine("before filter : " + newText);
+                        // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
+                        //newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+", "");
+                        //newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
+                        //newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
+                        //newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
+                        //newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
+                        //newText = newText.Trim();
+                        //Console.WriteLine("after filter  : " + newText);
 
-                        //if (newText != text)
-                        //{
-                        //    text = newText;
-                        //    Console.WriteLine("Origin : \n" + origin);
-                        //    Console.WriteLine("\n\nOCR to Text : \n" + text);
+                        var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
+                        Process.Start(naverTarget);
 
-                        //    Console.WriteLine(0);
-
-                        //    var googleWebBrowser = (IWebBrowserApp)GoogleIe;
-                        //    googleWebBrowser.Visible = true;
-
-                        //    var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + text;
-                        //    googleWebBrowser.Navigate(googleTarget);
-
-                        //    var daumWebBrowser = (IWebBrowserApp)DaumIe;
-                        //    daumWebBrowser.Visible = true;
-                        //    var daumTarget = @"http://dic.daum.net/search.do?q=" + text + @"&t=word&dic=eng";
-                        //    daumWebBrowser.Navigate(daumTarget);
-
-                        //    var naverWebBrowser = (IWebBrowserApp)NaverIe;
-                        //    naverWebBrowser.Visible = true;
-                        //    var naverTarget = @"http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=" + text;
-                        //    naverWebBrowser.Navigate(naverTarget);
-
-                        //    // var target = "http://translate.naver.com/#/en/ko/";
-                        //    // var target = "http://endic.naver.com/search.nhn?sLn=kr&isOnlyViewEE=N&query=";
-                        //    // var target = "http://endic.naver.com/popManager.nhn?sLn=kr&m=search&query=";
-                        //    // target += text + @"&t=word&dic=eng";
-
-                        //    //Console.WriteLine(target);
-                        //    // webBrowser.Quit();
-                        //}
+                        var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
+                        Process.Start(googleTarget);
                     }
                 }
             }
