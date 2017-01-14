@@ -30,6 +30,12 @@ namespace ScreenCaptureToOcrToDic
 
             gkh.HookedKeys.Add(Keys.A);
             gkh.HookedKeys.Add(Keys.Z);
+            gkh.HookedKeys.Add(Keys.S);
+            gkh.HookedKeys.Add(Keys.X);
+            gkh.HookedKeys.Add(Keys.D);
+            gkh.HookedKeys.Add(Keys.C);
+            gkh.HookedKeys.Add(Keys.F);
+            gkh.HookedKeys.Add(Keys.V);
             gkh.KeyDown += GkhKeyDown;
             gkh.KeyUp += GkhKeyUp;
 
@@ -62,7 +68,7 @@ namespace ScreenCaptureToOcrToDic
                 IsPresss[e.KeyCode] = false;
             }
 
-            e.Handled = false;
+            //e.Handled = false;
         }
 
         private static void GkhKeyDown(object sender, KeyEventArgs e)
@@ -81,16 +87,34 @@ namespace ScreenCaptureToOcrToDic
                 switch (e.KeyCode)
                 {
                     case Keys.A:
-                        ToOcr(0.44f, 0.1f, 0.66f);
+                        ToOcr(Translator.Google, 0.44f, 0.1f, 0.66f, true);
                         break;
                     case Keys.Z:
-                        ToOcr(0.44f, 0.66f, 0.1f);
+                        ToOcr(Translator.Google, 0.44f, 0.66f, 0.1f, true);
+                        break;
+                    case Keys.S:
+                        ToOcr(Translator.Naver, 0.44f, 0.1f, 0.66f, true);
+                        break;
+                    case Keys.X:
+                        ToOcr(Translator.Naver, 0.44f, 0.66f, 0.1f, true);
+                        break;
+                    case Keys.D:
+                        ToOcr(Translator.Google, 0.44f, 0.1f, 0.66f, false);
+                        break;
+                    case Keys.C:
+                        ToOcr(Translator.Google, 0.44f, 0.66f, 0.1f, false);
+                        break;
+                    case Keys.F:
+                        ToOcr(Translator.Naver, 0.44f, 0.1f, 0.66f, false);
+                        break;
+                    case Keys.V:
+                        ToOcr(Translator.Naver, 0.44f, 0.66f, 0.1f, false);
                         break;
                 }
             }
 
             // Console.WriteLine("Down\t" + e.KeyCode);
-            e.Handled = false;
+            // e.Handled = false;
         }
 
         // http://stackoverflow.com/questions/13547639/return-window-handle-by-its-name-title
@@ -109,12 +133,17 @@ namespace ScreenCaptureToOcrToDic
             return hWnd; //Should contain the handle but may be zero if the title doesn't match
         }
 
-        private static void ToOcr(float crapLeftRightRatio, float crapTopRatio, float crapBottomRatio)
+        private enum Translator
+        {
+            Google,
+            Naver
+        }
+
+        private static void ToOcr(Translator translator, float crapLeftRightRatio, float crapTopRatio, float crapBottomRatio, bool isPostProcessing)
         {
             var mousePosition = Control.MousePosition;
 
             var hWnd = WindowFromPoint(mousePosition);
-            // hWnd = 67624;
             Rectangle lpRect;
 
             var h = new IntPtr(hWnd);
@@ -146,12 +175,51 @@ namespace ScreenCaptureToOcrToDic
             var crapBottom = (int)(windowHeight * crapBottomRatio);
             var crapWidth = windowWidth - crapLeftRight;
             var crapHeight = windowHeight - (crapTop + crapBottom);
-            Console.WriteLine("crapWidth: " + crapWidth + ", crapHeight: " + crapHeight + ", lpRect: " + lpRect);
+            // Console.WriteLine("crapWidth: " + crapWidth + ", crapHeight: " + crapHeight + ", lpRect: " + lpRect);
             var bitmap = new Bitmap(crapWidth, crapHeight);
             var graphics = Graphics.FromImage(bitmap);
             graphics.CopyFromScreen(new Point(lpRect.X + crapLeftRight / 2, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
+
+            //using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+            //{
+            //    using (var img = Pix.LoadFromFile(srcTestImagePath))
+            //    {
+            //        using (var page = engine.Process(img))
+            //        {
+            //            var newText = page.GetText();
+
+            //            // url에 맞게 문자코드 수정
+            //            newText = newText.Trim();
+            //            if (string.IsNullOrEmpty(newText))
+            //            {
+            //                return;
+            //            }
+
+            //            newText = newText.Replace('\n', ' ');
+            //            Console.WriteLine("1: " + newText);
+            //            newText = newText.Replace(" ", "%20");
+            //            newText = newText.Replace(@"""", "%22");
+            //            // newText = @"%22" + newText + @"%22";
+
+            //            //var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
+            //            //Process.Start(naverTarget);
+
+            //            var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
+            //            Process.Start(googleTarget);
+            //        }
+            //    }
+            //}
+
+            if (isPostProcessing)
+            {
+                // 흑백 처리
+                var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
+                var dst = new Mat(new[] { src.Width, src.Height }, MatType.CV_8U);
+                Cv2.Threshold(src, dst, 150, 255, ThresholdTypes.Binary);
+                Cv2.ImWrite(srcTestImagePath, dst);
+            }
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
             {
@@ -169,52 +237,24 @@ namespace ScreenCaptureToOcrToDic
                         }
 
                         newText = newText.Replace('\n', ' ');
-                        Console.WriteLine("1: " + newText);
+                        Console.WriteLine(newText);
                         newText = newText.Replace(" ", "%20");
                         newText = newText.Replace(@"""", "%22");
-                        // newText = @"%22" + newText + @"%22";
 
-                        //var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
-                        //Process.Start(naverTarget);
-
-                        var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
-                        Process.Start(googleTarget);
-                    }
-                }
-            }
-
-            // 흑백 처리
-            var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
-            var dst = new Mat(new[] { src.Width, src.Height }, MatType.CV_8U);
-            Cv2.Threshold(src, dst, 150, 255, ThresholdTypes.Binary);
-            Cv2.ImWrite(dstTestImagePath, dst);
-
-            using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
-            {
-                using (var img = Pix.LoadFromFile(dstTestImagePath))
-                {
-                    using (var page = engine.Process(img))
-                    {
-                        var newText = page.GetText();
-
-                        // url에 맞게 문자코드 수정
-                        newText = newText.Trim();
-                        if (string.IsNullOrEmpty(newText))
+                        switch (translator)
                         {
-                            return;
+                            case Translator.Google:
+                                newText = @"%22" + newText + @"%22";
+                                var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
+                                Process.Start(googleTarget);
+                                break;
+                            case Translator.Naver:
+                                var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
+                                Process.Start(naverTarget);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(translator), translator, null);
                         }
-
-                        newText = newText.Replace('\n', ' ');
-                        Console.WriteLine("2: " + newText);
-                        newText = newText.Replace(" ", "%20");
-                        newText = newText.Replace(@"""", "%22");
-                        // newText = @"%22" + newText + @"%22";
-
-                        //var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
-                        //Process.Start(naverTarget);
-
-                        var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
-                        Process.Start(googleTarget);
                     }
                 }
             }
