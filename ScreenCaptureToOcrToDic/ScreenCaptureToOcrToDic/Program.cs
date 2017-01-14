@@ -162,12 +162,7 @@ namespace ScreenCaptureToOcrToDic
 
             GetWindowRect(h, out lpRect);
 
-            // Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
-            //Console.WriteLine("Rect {0}, {1}", lpRect.Left, lpRect.Width);
-
             const string srcTestImagePath = "./test.png";
-            const string dstTestImagePath = "./test1.png";
-
             var windowWidth = lpRect.Width - lpRect.X;
             var windowHeight = lpRect.Height - lpRect.Y;
             var crapLeftRight = (int)(windowWidth * crapLeftRightRatio);
@@ -175,50 +170,25 @@ namespace ScreenCaptureToOcrToDic
             var crapBottom = (int)(windowHeight * crapBottomRatio);
             var crapWidth = windowWidth - crapLeftRight;
             var crapHeight = windowHeight - (crapTop + crapBottom);
-            // Console.WriteLine("crapWidth: " + crapWidth + ", crapHeight: " + crapHeight + ", lpRect: " + lpRect);
             var bitmap = new Bitmap(crapWidth, crapHeight);
             var graphics = Graphics.FromImage(bitmap);
             graphics.CopyFromScreen(new Point(lpRect.X + crapLeftRight / 2, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
-            //using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
-            //{
-            //    using (var img = Pix.LoadFromFile(srcTestImagePath))
-            //    {
-            //        using (var page = engine.Process(img))
-            //        {
-            //            var newText = page.GetText();
-
-            //            // url에 맞게 문자코드 수정
-            //            newText = newText.Trim();
-            //            if (string.IsNullOrEmpty(newText))
-            //            {
-            //                return;
-            //            }
-
-            //            newText = newText.Replace('\n', ' ');
-            //            Console.WriteLine("1: " + newText);
-            //            newText = newText.Replace(" ", "%20");
-            //            newText = newText.Replace(@"""", "%22");
-            //            // newText = @"%22" + newText + @"%22";
-
-            //            //var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
-            //            //Process.Start(naverTarget);
-
-            //            var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
-            //            Process.Start(googleTarget);
-            //        }
-            //    }
-            //}
 
             if (isPostProcessing)
             {
                 // 흑백 처리
-                var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
-                var dst = new Mat(new[] { src.Width, src.Height }, MatType.CV_8U);
-                Cv2.Threshold(src, dst, 150, 255, ThresholdTypes.Binary);
-                Cv2.ImWrite(srcTestImagePath, dst);
+                var src = Cv2.ImRead(srcTestImagePath, ImreadModes.AnyColor);
+
+                var redLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+                Cv2.InRange(src, new Scalar(0, 50, 200), new Scalar(50, 150, 255), redLetterFilter);
+
+                var whiteLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+                Cv2.InRange(src, new Scalar(200, 200, 200), new Scalar(255, 255, 255), whiteLetterFilter);
+
+                Cv2.ImWrite(srcTestImagePath, redLetterFilter + whiteLetterFilter);
             }
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
