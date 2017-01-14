@@ -182,13 +182,21 @@ namespace ScreenCaptureToOcrToDic
                 // 흑백 처리
                 var src = Cv2.ImRead(srcTestImagePath, ImreadModes.AnyColor);
 
-                var redLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
-                Cv2.InRange(src, new Scalar(0, 50, 200), new Scalar(50, 150, 255), redLetterFilter);
+                var letterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+                Cv2.InRange(src, new Scalar(200, 200, 200), new Scalar(255, 255, 255), letterFilter);
 
-                var whiteLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
-                Cv2.InRange(src, new Scalar(200, 200, 200), new Scalar(255, 255, 255), whiteLetterFilter);
 
-                Cv2.ImWrite(srcTestImagePath, redLetterFilter + whiteLetterFilter);
+                // 빨강
+                var colorLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+                Cv2.InRange(src, new Scalar(0, 50, 200), new Scalar(100, 150, 255), colorLetterFilter);
+
+                letterFilter += colorLetterFilter;
+
+                // 초록
+                Cv2.InRange(src, new Scalar(120, 200, 0), new Scalar(190, 255, 50), colorLetterFilter);
+                letterFilter += colorLetterFilter;
+
+                Cv2.ImWrite(srcTestImagePath, colorLetterFilter + letterFilter);
             }
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
