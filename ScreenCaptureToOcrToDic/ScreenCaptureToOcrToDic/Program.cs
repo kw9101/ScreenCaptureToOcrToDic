@@ -5,11 +5,13 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
-using System.Windows.Input;
+using OpenCvSharp;
 using Tesseract;
 using Utilities;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
+using Point = System.Drawing.Point;
+using Size = System.Drawing.Size;
 
 namespace ScreenCaptureToOcrToDic
 {
@@ -25,11 +27,9 @@ namespace ScreenCaptureToOcrToDic
         {
             // keyboard hook 초기화및 셋팅
             var gkh = new globalKeyboardHook();
-           
+
             gkh.HookedKeys.Add(Keys.A);
             gkh.HookedKeys.Add(Keys.Z);
-            gkh.HookedKeys.Add(Keys.LShiftKey);
-            gkh.HookedKeys.Add(Keys.LControlKey);
             gkh.KeyDown += GkhKeyDown;
             gkh.KeyUp += GkhKeyUp;
 
@@ -39,22 +39,19 @@ namespace ScreenCaptureToOcrToDic
         }
 
         [DllImport("user32.dll")]
-        public static extern int WindowFromPoint(Point lpPoint);
+        private static extern int WindowFromPoint(Point lpPoint);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern int GetWindowTextLength(IntPtr hWnd);
+        private static extern int GetWindowTextLength(IntPtr hWnd);
 
         [DllImport("User32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern long GetWindowText(IntPtr hwnd, StringBuilder lpString, long cch);
+        private static extern long GetWindowText(IntPtr hwnd, StringBuilder lpString, long cch);
 
         [DllImport("User32.dll")]
-        static extern IntPtr GetParent(IntPtr hwnd);
-
-        [DllImport("User32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern long GetClassName(IntPtr hwnd, StringBuilder lpClassName, long nMaxCount);
+        private static extern IntPtr GetParent(IntPtr hwnd);
 
         private static void GkhKeyUp(object sender, KeyEventArgs e)
         {
@@ -81,22 +78,14 @@ namespace ScreenCaptureToOcrToDic
 
             if (isPress == false)
             {
-                bool isPressLShiftKey;
-                IsPresss.TryGetValue(Keys.LControlKey, out isPressLShiftKey);
-                bool isPressLControlKey;
-                IsPresss.TryGetValue(Keys.LControlKey, out isPressLControlKey);
-
-                if (isPressLShiftKey && isPressLControlKey)
+                switch (e.KeyCode)
                 {
-                    switch (e.KeyCode)
-                    {
-                        case Keys.A:
-                            GetValue(0.47f, 0.1f, 0.57f);
-                            break;
-                        case Keys.Z:
-                            GetValue(0.47f, 0.57f, 0.09f);
-                            break;
-                    }
+                    case Keys.A:
+                        ToOcr(0.44f, 0.1f, 0.66f);
+                        break;
+                    case Keys.Z:
+                        ToOcr(0.44f, 0.66f, 0.1f);
+                        break;
                 }
             }
 
@@ -120,7 +109,7 @@ namespace ScreenCaptureToOcrToDic
             return hWnd; //Should contain the handle but may be zero if the title doesn't match
         }
 
-        private static void GetValue(float crapHRatio, float crapTopRatio, float crapBottomRatio)
+        private static void ToOcr(float crapLeftRightRatio, float crapTopRatio, float crapBottomRatio)
         {
             var mousePosition = Control.MousePosition;
 
@@ -129,19 +118,20 @@ namespace ScreenCaptureToOcrToDic
             Rectangle lpRect;
 
             var h = new IntPtr(hWnd);
-            GetWindowRect(h, out lpRect);
 
+            var parentH = GetParent(h);
 
-            var maxLength = GetWindowTextLength(h);
+            var maxLength = GetWindowTextLength(parentH);
             var windowText = new StringBuilder("", maxLength + 5);
-            GetWindowText(h, windowText, maxLength + 2);
-
+            GetWindowText(parentH, windowText, maxLength + 2);
             var caption = windowText.ToString();
-            if (caption != "Render")
+            if (caption.Contains("CEMU") == false)
             {
                 Console.WriteLine("Caption: " + caption);
                 return;
             }
+
+            GetWindowRect(h, out lpRect);
 
             // Console.WriteLine("Time : {0} > MousePosition x : {1}, y : {2}, windowHandle : {3}", e.SignalTime, mousePosition.X, mousePosition.Y, hWnd);
             //Console.WriteLine("Rect {0}, {1}", lpRect.Left, lpRect.Width);
@@ -149,26 +139,22 @@ namespace ScreenCaptureToOcrToDic
             const string srcTestImagePath = "./test.png";
             const string dstTestImagePath = "./test1.png";
 
-            var crapH = (int) (lpRect.Width*crapHRatio);
-            var crapTop = (int) (lpRect.Height*crapTopRatio);
-            var crapBottom = (int) (lpRect.Height*crapBottomRatio);
-            var bitmap = new Bitmap(lpRect.Width - lpRect.Left + crapH,
-                lpRect.Height - lpRect.Top - (crapTop + crapBottom));
+            var windowWidth = lpRect.Width - lpRect.X;
+            var windowHeight = lpRect.Height - lpRect.Y;
+            var crapLeftRight = (int)(windowWidth * crapLeftRightRatio);
+            var crapTop = (int)(windowHeight * crapTopRatio);
+            var crapBottom = (int)(windowHeight * crapBottomRatio);
+            var crapWidth = windowWidth - crapLeftRight;
+            var crapHeight = windowHeight - (crapTop + crapBottom);
+            Console.WriteLine("crapWidth: " + crapWidth + ", crapHeight: " + crapHeight + ", lpRect: " + lpRect);
+            var bitmap = new Bitmap(crapWidth, crapHeight);
             var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen(new Point(lpRect.Left - crapH/2, lpRect.Top + crapTop), new Point(0, 0),
-                new Size(lpRect.Width - lpRect.Left - crapH, lpRect.Height - lpRect.Top - (crapTop + crapBottom)));
+            graphics.CopyFromScreen(new Point(lpRect.X + crapLeftRight / 2, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
-            //var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
-            //var dst = new Mat(new int[] {src.Width, src.Height}, MatType.CV_8U);
-            //Cv2.Threshold(src, dst, 254, 255, ThresholdTypes.Binary);
-            //Cv2.ImWrite(dstTestImagePath, dst);
-
-            // return;
-            using (var engine = new TesseractEngine(@"./tessdata", "eng+en1", EngineMode.Default))
+            using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
             {
-                // using (var img = Pix.LoadFromFile(dstTestImagePath))
                 using (var img = Pix.LoadFromFile(srcTestImagePath))
                 {
                     using (var page = engine.Process(img))
@@ -177,24 +163,55 @@ namespace ScreenCaptureToOcrToDic
 
                         // url에 맞게 문자코드 수정
                         newText = newText.Trim();
+                        if (string.IsNullOrEmpty(newText))
+                        {
+                            return;
+                        }
+
                         newText = newText.Replace('\n', ' ');
-                        Console.WriteLine("Text: " + newText);
+                        Console.WriteLine("1: " + newText);
                         newText = newText.Replace(" ", "%20");
                         newText = newText.Replace(@"""", "%22");
-                        newText = @"%22" + newText + @"%22";
-                        // newText = newText.Replace('1', 'l');
-                        //Console.WriteLine("before filter : " + newText);
-                        // newText = newText.Replace(@"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+", " ");  // noise 필터
-                        //newText = Regex.Replace(newText, @"([a-zA-Z]*[^a-zA-Z\s]+[a-zA-Z]*)+([a-zA-Z]*[^a-zA-Z\s.]+[a-zA-Z]*)+", "");
-                        //newText = Regex.Replace(newText, @"[^a-zA-Z\s][a-zA-Z]+ ", ""); // 특수문자로 시작하는 문자열 필터링
-                        //newText = Regex.Replace(newText, @"\b[b-zA-HJ-Z]\b", ""); // a,I를 뺀 외자 필터
-                        //newText = Regex.Replace(newText, @"\*", ""); // 특수기호 필터
-                        //newText = Regex.Replace(newText, @"\s+", " "); // 스페이스 여러개는 하나로 합침
-                        //newText = newText.Trim();
-                        //Console.WriteLine("after filter  : " + newText);
+                        // newText = @"%22" + newText + @"%22";
 
-                        var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
-                        Process.Start(naverTarget);
+                        //var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
+                        //Process.Start(naverTarget);
+
+                        var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
+                        Process.Start(googleTarget);
+                    }
+                }
+            }
+
+            // 흑백 처리
+            var src = Cv2.ImRead(srcTestImagePath, ImreadModes.GrayScale);
+            var dst = new Mat(new[] { src.Width, src.Height }, MatType.CV_8U);
+            Cv2.Threshold(src, dst, 150, 255, ThresholdTypes.Binary);
+            Cv2.ImWrite(dstTestImagePath, dst);
+
+            using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+            {
+                using (var img = Pix.LoadFromFile(dstTestImagePath))
+                {
+                    using (var page = engine.Process(img))
+                    {
+                        var newText = page.GetText();
+
+                        // url에 맞게 문자코드 수정
+                        newText = newText.Trim();
+                        if (string.IsNullOrEmpty(newText))
+                        {
+                            return;
+                        }
+
+                        newText = newText.Replace('\n', ' ');
+                        Console.WriteLine("2: " + newText);
+                        newText = newText.Replace(" ", "%20");
+                        newText = newText.Replace(@"""", "%22");
+                        // newText = @"%22" + newText + @"%22";
+
+                        //var naverTarget = "http://translate.naver.com/#/en/ko/" + newText;
+                        //Process.Start(naverTarget);
 
                         var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
                         Process.Start(googleTarget);
