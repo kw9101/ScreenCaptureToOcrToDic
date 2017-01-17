@@ -11,6 +11,7 @@ using Utilities;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 using Point = System.Drawing.Point;
+using Rect = OpenCvSharp.Rect;
 using Size = System.Drawing.Size;
 
 namespace ScreenCaptureToOcrToDic
@@ -28,14 +29,21 @@ namespace ScreenCaptureToOcrToDic
             // keyboard hook 초기화및 셋팅
             var gkh = new globalKeyboardHook();
 
+            gkh.HookedKeys.Add(Keys.Q);
             gkh.HookedKeys.Add(Keys.A);
             gkh.HookedKeys.Add(Keys.Z);
+            gkh.HookedKeys.Add(Keys.W);
             gkh.HookedKeys.Add(Keys.S);
             gkh.HookedKeys.Add(Keys.X);
+            gkh.HookedKeys.Add(Keys.E);
             gkh.HookedKeys.Add(Keys.D);
             gkh.HookedKeys.Add(Keys.C);
-            gkh.HookedKeys.Add(Keys.F);
-            gkh.HookedKeys.Add(Keys.V);
+            gkh.HookedKeys.Add(Keys.D1);
+            gkh.HookedKeys.Add(Keys.D2);
+            gkh.HookedKeys.Add(Keys.D3);
+            gkh.HookedKeys.Add(Keys.D4);
+            gkh.HookedKeys.Add(Keys.D7);
+            gkh.HookedKeys.Add(Keys.D0);
             gkh.KeyDown += GkhKeyDown;
             gkh.KeyUp += GkhKeyUp;
 
@@ -61,7 +69,7 @@ namespace ScreenCaptureToOcrToDic
 
         private static void GkhKeyUp(object sender, KeyEventArgs e)
         {
-            //Console.WriteLine("Up\t" + e.KeyCode);
+            // Console.WriteLine("Up\t" + e.KeyCode);
 
             if (IsPresss.ContainsKey(e.KeyCode))
             {
@@ -69,6 +77,22 @@ namespace ScreenCaptureToOcrToDic
             }
 
             //e.Handled = false;
+        }
+
+        private struct Rect
+        {
+            public Rect(float left, float right, float top, float bottom)
+            {
+                Left = left;
+                Right = right;
+                Top = top;
+                Bottom = bottom;
+            }
+
+            public float Left;
+            public float Right;
+            public float Top;
+            public float Bottom;
         }
 
         private static void GkhKeyDown(object sender, KeyEventArgs e)
@@ -80,40 +104,88 @@ namespace ScreenCaptureToOcrToDic
                 isPress = false;
             }
 
-            IsPresss[e.KeyCode] = true;
+            var topRect = new Rect(0.22f, 0.22f, 0.1f, 0.66f);
+            var middleRect = new Rect(0.22f, 0.22f, 0.39f, 0.39f);
+            var bottomRect = new Rect(0.22f, 0.22f, 0.66f, 0.1f);
 
+            IsPresss[e.KeyCode] = true;
             if (isPress == false)
             {
                 switch (e.KeyCode)
                 {
+                    case Keys.D1:
+                        if (ToOcr(Translator.Google, bottomRect, true))
+                        {
+                            break;
+                        }
+
+                        if (ToOcr(Translator.Google, topRect, true))
+                        {
+                            break;
+                        }
+
+                        ToOcr(Translator.Google, middleRect, true);
+
+                        break;
+                    case Keys.Q:
+                        ToOcr(Translator.Google, topRect, true);
+                        break;
                     case Keys.A:
-                        ToOcr(Translator.Google, 0.44f, 0.1f, 0.66f, true);
+                        ToOcr(Translator.Google, middleRect, true);
                         break;
                     case Keys.Z:
-                        ToOcr(Translator.Google, 0.44f, 0.66f, 0.1f, true);
+                        ToOcr(Translator.Google, bottomRect, true);
+                        break;
+                    case Keys.D2:
+                        if (ToOcr(Translator.Google, bottomRect, false))
+                        {
+                            break;
+                        }
+
+                        if (ToOcr(Translator.Google, topRect, false))
+                        {
+                            break;
+                        }
+
+                        ToOcr(Translator.Google, middleRect, false);
+
+                        break;
+                    case Keys.W:
+                        ToOcr(Translator.Google, topRect, false);
                         break;
                     case Keys.S:
-                        ToOcr(Translator.Naver, 0.44f, 0.1f, 0.66f, true);
+                        ToOcr(Translator.Google, middleRect, false);
                         break;
                     case Keys.X:
-                        ToOcr(Translator.Naver, 0.44f, 0.66f, 0.1f, true);
+                        ToOcr(Translator.Google, bottomRect, false);
+                        break;
+                    case Keys.D3:
+                        if (ToOcr(Translator.Naver, bottomRect, false))
+                        {
+                            break;
+                        }
+
+                        if (ToOcr(Translator.Naver, topRect, false))
+                        {
+                            break;
+                        }
+
+                        ToOcr(Translator.Naver, middleRect, false);
+
+                        break;
+                    case Keys.E:
+                        ToOcr(Translator.Naver, topRect, false);
                         break;
                     case Keys.D:
-                        ToOcr(Translator.Google, 0.44f, 0.1f, 0.66f, false);
+                        ToOcr(Translator.Naver, middleRect, false);
                         break;
                     case Keys.C:
-                        ToOcr(Translator.Google, 0.44f, 0.66f, 0.1f, false);
-                        break;
-                    case Keys.F:
-                        ToOcr(Translator.Naver, 0.44f, 0.1f, 0.66f, false);
-                        break;
-                    case Keys.V:
-                        ToOcr(Translator.Naver, 0.44f, 0.66f, 0.1f, false);
+                        ToOcr(Translator.Naver, bottomRect, false);
                         break;
                 }
             }
 
-            // Console.WriteLine("Down\t" + e.KeyCode);
+            //Console.WriteLine("Down\t" + e.KeyCode);
             // e.Handled = false;
         }
 
@@ -139,7 +211,12 @@ namespace ScreenCaptureToOcrToDic
             Naver
         }
 
-        private static void ToOcr(Translator translator, float crapLeftRightRatio, float crapTopRatio, float crapBottomRatio, bool isPostProcessing)
+        private static bool ToOcr(Translator translator, Rect crapRatio, bool isInQuotes)
+        {
+            return ToOcr(translator, crapRatio.Left, crapRatio.Right, crapRatio.Top, crapRatio.Bottom, isInQuotes);
+        }
+
+        private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio, float crapBottomRatio, bool isInQuotes)
         {
             var mousePosition = Control.MousePosition;
 
@@ -154,10 +231,10 @@ namespace ScreenCaptureToOcrToDic
             var windowText = new StringBuilder("", maxLength + 5);
             GetWindowText(parentH, windowText, maxLength + 2);
             var caption = windowText.ToString();
-            if (caption.Contains("CEMU") == false)
+            if (caption.Contains("Cemu") == false)
             {
                 Console.WriteLine("Caption: " + caption);
-                return;
+                return false;
             }
 
             GetWindowRect(h, out lpRect);
@@ -165,39 +242,35 @@ namespace ScreenCaptureToOcrToDic
             const string srcTestImagePath = "./test.png";
             var windowWidth = lpRect.Width - lpRect.X;
             var windowHeight = lpRect.Height - lpRect.Y;
-            var crapLeftRight = (int)(windowWidth * crapLeftRightRatio);
+
+            var crapLeft = (int)(windowWidth * crapLeftRatio);
+            var crapRight= (int)(windowWidth * crapRightRatio);
             var crapTop = (int)(windowHeight * crapTopRatio);
             var crapBottom = (int)(windowHeight * crapBottomRatio);
-            var crapWidth = windowWidth - crapLeftRight;
+
+            var crapWidth = windowWidth - (crapLeft + crapRight);
             var crapHeight = windowHeight - (crapTop + crapBottom);
+
             var bitmap = new Bitmap(crapWidth, crapHeight);
             var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen(new Point(lpRect.X + crapLeftRight / 2, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
+
+            graphics.CopyFromScreen(new Point(lpRect.X + crapLeft, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
-
-            if (isPostProcessing)
-            {
-                // 흑백 처리
-                var src = Cv2.ImRead(srcTestImagePath, ImreadModes.AnyColor);
-
-                var letterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
-                Cv2.InRange(src, new Scalar(200, 200, 200), new Scalar(255, 255, 255), letterFilter);
-
-
-                // 빨강
-                var colorLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
-                Cv2.InRange(src, new Scalar(0, 50, 200), new Scalar(100, 150, 255), colorLetterFilter);
-
-                letterFilter += colorLetterFilter;
-
-                // 초록
-                Cv2.InRange(src, new Scalar(120, 200, 0), new Scalar(190, 255, 50), colorLetterFilter);
-                letterFilter += colorLetterFilter;
-
-                Cv2.ImWrite(srcTestImagePath, colorLetterFilter + letterFilter);
-            }
+            // 후처리
+            var src = Cv2.ImRead(srcTestImagePath, ImreadModes.AnyColor);
+            var letterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+            // 하얀 글자
+            Cv2.InRange(src, new Scalar(200, 200, 200), new Scalar(255, 255, 255), letterFilter);
+            var colorLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+            // 빨강 글자
+            Cv2.InRange(src, new Scalar(0, 50, 200), new Scalar(100, 150, 255), colorLetterFilter);
+            letterFilter += colorLetterFilter;
+            // 초록 글자
+            Cv2.InRange(src, new Scalar(120, 200, 0), new Scalar(190, 255, 50), colorLetterFilter);
+            letterFilter += colorLetterFilter;
+            Cv2.ImWrite(srcTestImagePath, colorLetterFilter + letterFilter);
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
             {
@@ -211,7 +284,7 @@ namespace ScreenCaptureToOcrToDic
                         newText = newText.Trim();
                         if (string.IsNullOrEmpty(newText))
                         {
-                            return;
+                            return false;
                         }
 
                         newText = newText.Replace('\n', ' ');
@@ -219,10 +292,14 @@ namespace ScreenCaptureToOcrToDic
                         newText = newText.Replace(" ", "%20");
                         newText = newText.Replace(@"""", "%22");
 
+                        if (isInQuotes)
+                        {
+                            newText = @"%22" + newText + @"%22";
+                        }
+
                         switch (translator)
                         {
                             case Translator.Google:
-                                newText = @"%22" + newText + @"%22";
                                 var googleTarget = "https://translate.google.com/?source=gtx_m#en/ko/" + newText;
                                 Process.Start(googleTarget);
                                 break;
@@ -236,6 +313,8 @@ namespace ScreenCaptureToOcrToDic
                     }
                 }
             }
+
+            return true;
         }
     }
 }
