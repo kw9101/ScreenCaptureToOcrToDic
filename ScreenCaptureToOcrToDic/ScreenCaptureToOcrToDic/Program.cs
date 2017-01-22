@@ -270,6 +270,10 @@ namespace ScreenCaptureToOcrToDic
             // 초록 글자
             Cv2.InRange(src, new Scalar(120, 200, 0), new Scalar(190, 255, 50), colorLetterFilter);
             letterFilter += colorLetterFilter;
+            // 파랑 글자
+            Cv2.InRange(src, new Scalar(180, 180, 0), new Scalar(255, 255, 120), colorLetterFilter);
+            letterFilter += colorLetterFilter;
+
             Cv2.ImWrite(srcTestImagePath, colorLetterFilter + letterFilter);
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
