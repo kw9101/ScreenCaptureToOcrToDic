@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using System.Xml;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using Tesseract;
 using Utilities;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
-using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 using Point = System.Drawing.Point;
-using Rect = OpenCvSharp.Rect;
 using Size = System.Drawing.Size;
 
 namespace ScreenCaptureToOcrToDic
@@ -21,11 +22,14 @@ namespace ScreenCaptureToOcrToDic
         // 키를 누르고 있을 때 연속으로 눌리지 않게 하기 위한 꼼수.
         private static readonly Dictionary<Keys, bool> IsPresss = new Dictionary<Keys, bool>();
 
+        private static List<Tuple<Scalar, Scalar>> LetterColors = new List<Tuple<Scalar, Scalar>>();
         /// <summary>
         ///     The main entry point for the application.
         /// </summary>
         private static void Main()
         {
+            InitConfig();
+
             // keyboard hook 초기화및 셋팅
             var gkh = new globalKeyboardHook();
 
@@ -50,6 +54,33 @@ namespace ScreenCaptureToOcrToDic
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
+        }
+
+        private static void InitConfig()
+        {
+            const string configFilePath = @".\config.xml";
+
+            var strXml = File.ReadAllText(configFilePath);
+
+            var xml = new XmlDocument();
+            xml.LoadXml(strXml);
+            var xmlNodes = xml.GetElementsByTagName("Color");
+
+            foreach (XmlNode xn in xmlNodes)
+            {
+                var minRgb = xn.Attributes["min"].InnerText.Split(',');
+                var maxRgb = xn.Attributes["max"].InnerText.Split(',');
+
+                var minr = Convert.ToInt32(minRgb[0]);
+                var ming = Convert.ToInt32(minRgb[1]);
+                var minb = Convert.ToInt32(minRgb[2]);
+
+                var maxr = Convert.ToInt32(maxRgb[0]);
+                var maxg = Convert.ToInt32(maxRgb[1]);
+                var maxb = Convert.ToInt32(maxRgb[2]);
+
+                LetterColors.Add(new Tuple<Scalar, Scalar>(new Scalar(minr, ming, minb), new Scalar(maxr, maxg, maxb)));
+            }
         }
 
         [DllImport("user32.dll")]
@@ -89,10 +120,10 @@ namespace ScreenCaptureToOcrToDic
                 Bottom = bottom;
             }
 
-            public float Left;
-            public float Right;
-            public float Top;
-            public float Bottom;
+            public readonly float Left;
+            public readonly float Right;
+            public readonly float Top;
+            public readonly float Bottom;
         }
 
         private static void GkhKeyDown(object sender, KeyEventArgs e)
@@ -108,79 +139,91 @@ namespace ScreenCaptureToOcrToDic
             var middleRect = new Rect(0.22f, 0.22f, 0.39f, 0.39f);
             var bottomRect = new Rect(0.22f, 0.22f, 0.66f, 0.1f);
 
+            //var LetterColors = new List<Tuple<Scalar, Scalar>>
+            //{
+            //    // 하양
+            //    new Tuple<Scalar, Scalar>(new Scalar(200, 200, 200), new Scalar(255, 255, 255)),
+            //    // 빨강
+            //    new Tuple<Scalar, Scalar>(new Scalar(0, 50, 200), new Scalar(100, 150, 255)),
+            //    // 초록
+            //    new Tuple<Scalar, Scalar>(new Scalar(120, 200, 0), new Scalar(190, 255, 50)),
+            //    // 파랑
+            //    new Tuple<Scalar, Scalar>(new Scalar(180, 180, 0), new Scalar(255, 255, 80))
+            //};
+
             IsPresss[e.KeyCode] = true;
             if (isPress == false)
             {
                 switch (e.KeyCode)
                 {
                     case Keys.D1:
-                        if (ToOcr(Translator.Google, bottomRect, true))
+                        if (ToOcr(Translator.Google, bottomRect, true, LetterColors))
                         {
                             break;
                         }
 
-                        if (ToOcr(Translator.Google, topRect, true))
+                        if (ToOcr(Translator.Google, topRect, true, LetterColors))
                         {
                             break;
                         }
 
-                        ToOcr(Translator.Google, middleRect, true);
+                        ToOcr(Translator.Google, middleRect, true, LetterColors);
 
                         break;
                     case Keys.Q:
-                        ToOcr(Translator.Google, topRect, true);
+                        ToOcr(Translator.Google, topRect, true, LetterColors);
                         break;
                     case Keys.A:
-                        ToOcr(Translator.Google, middleRect, true);
+                        ToOcr(Translator.Google, middleRect, true, LetterColors);
                         break;
                     case Keys.Z:
-                        ToOcr(Translator.Google, bottomRect, true);
+                        ToOcr(Translator.Google, bottomRect, true, LetterColors);
                         break;
                     case Keys.D2:
-                        if (ToOcr(Translator.Google, bottomRect, false))
+                        if (ToOcr(Translator.Google, bottomRect, false, LetterColors))
                         {
                             break;
                         }
 
-                        if (ToOcr(Translator.Google, topRect, false))
+                        if (ToOcr(Translator.Google, topRect, false, LetterColors))
                         {
                             break;
                         }
 
-                        ToOcr(Translator.Google, middleRect, false);
+                        ToOcr(Translator.Google, middleRect, false, LetterColors);
 
                         break;
                     case Keys.W:
-                        ToOcr(Translator.Google, topRect, false);
+                        ToOcr(Translator.Google, topRect, false, LetterColors);
                         break;
                     case Keys.S:
-                        ToOcr(Translator.Google, middleRect, false);
+                        ToOcr(Translator.Google, middleRect, false, LetterColors);
                         break;
                     case Keys.X:
-                        ToOcr(Translator.Google, bottomRect, false);
+                        ToOcr(Translator.Google, bottomRect, false, LetterColors);
                         break;
                     case Keys.D3:
-                        if (ToOcr(Translator.Naver, bottomRect, false))
+                        if (ToOcr(Translator.Naver, bottomRect, false, LetterColors))
                         {
                             break;
                         }
 
-                        if (ToOcr(Translator.Naver, topRect, false))
+                        if (ToOcr(Translator.Naver, topRect, false, LetterColors))
                         {
                             break;
                         }
 
-                        ToOcr(Translator.Naver, middleRect, false);
+                        ToOcr(Translator.Naver, middleRect, false, LetterColors);
 
                         break;
                     case Keys.E:
-                        ToOcr(Translator.Naver, topRect, false);
+                        ToOcr(Translator.Naver, topRect, false, LetterColors);
                         break;
                     case Keys.D:
-                        ToOcr(Translator.Naver, middleRect, false);
+                        ToOcr(Translator.Naver, middleRect, false, LetterColors);
                         break;
                     case Keys.C:
-                        ToOcr(Translator.Naver, bottomRect, false);
+                        ToOcr(Translator.Naver, bottomRect, false, LetterColors);
                         break;
                 }
             }
@@ -211,12 +254,13 @@ namespace ScreenCaptureToOcrToDic
             Naver
         }
 
-        private static bool ToOcr(Translator translator, Rect crapRatio, bool isInQuotes)
+        private static bool ToOcr(Translator translator, Rect crapRatio, bool isInQuotes, List<Tuple<Scalar, Scalar>> letterColors)
         {
-            return ToOcr(translator, crapRatio.Left, crapRatio.Right, crapRatio.Top, crapRatio.Bottom, isInQuotes);
+            return ToOcr(translator, crapRatio.Left, crapRatio.Right, crapRatio.Top, crapRatio.Bottom, isInQuotes, letterColors);
         }
 
-        private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio, float crapBottomRatio, bool isInQuotes)
+        private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio,
+            float crapBottomRatio, bool isInQuotes, List<Tuple<Scalar, Scalar>> letterColors)
         {
             var mousePosition = Control.MousePosition;
 
@@ -244,7 +288,7 @@ namespace ScreenCaptureToOcrToDic
             var windowHeight = lpRect.Height - lpRect.Y;
 
             var crapLeft = (int)(windowWidth * crapLeftRatio);
-            var crapRight= (int)(windowWidth * crapRightRatio);
+            var crapRight = (int)(windowWidth * crapRightRatio);
             var crapTop = (int)(windowHeight * crapTopRatio);
             var crapBottom = (int)(windowHeight * crapBottomRatio);
 
@@ -254,27 +298,25 @@ namespace ScreenCaptureToOcrToDic
             var bitmap = new Bitmap(crapWidth, crapHeight);
             var graphics = Graphics.FromImage(bitmap);
 
-            graphics.CopyFromScreen(new Point(lpRect.X + crapLeft, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
+            graphics.CopyFromScreen(new Point(lpRect.X + crapLeft, lpRect.Y + crapTop), new Point(0, 0),
+                new Size(crapWidth, crapHeight));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
             // 후처리
             var src = Cv2.ImRead(srcTestImagePath, ImreadModes.AnyColor);
-            var letterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
-            // 하얀 글자
-            Cv2.InRange(src, new Scalar(200, 200, 200), new Scalar(255, 255, 255), letterFilter);
-            var colorLetterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
-            // 빨강 글자
-            Cv2.InRange(src, new Scalar(0, 50, 200), new Scalar(100, 150, 255), colorLetterFilter);
-            letterFilter += colorLetterFilter;
-            // 초록 글자
-            Cv2.InRange(src, new Scalar(120, 200, 0), new Scalar(190, 255, 50), colorLetterFilter);
-            letterFilter += colorLetterFilter;
-            // 파랑 글자
-            Cv2.InRange(src, new Scalar(180, 180, 0), new Scalar(255, 255, 120), colorLetterFilter);
-            letterFilter += colorLetterFilter;
 
-            Cv2.ImWrite(srcTestImagePath, colorLetterFilter + letterFilter);
+            var letterFilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+            var tempColorLetterfilter = new Mat(new[] { src.Width, src.Height }, MatType.CV_16U);
+
+            Cv2.InRange(src, 0, 0, letterFilter);
+            foreach (var letterColor in letterColors)
+            {
+                Cv2.InRange(src, letterColor.Item1, letterColor.Item2, tempColorLetterfilter);
+                letterFilter += tempColorLetterfilter;
+            }
+
+            Cv2.ImWrite(srcTestImagePath, letterFilter);
 
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
             {

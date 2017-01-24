@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Config>
+  <Color min ="200, 200, 200" max ="255, 255, 255" />
+  <Color min ="0, 50, 200" max ="100, 150, 255" />
+  <Color min ="120, 200, 0" max ="190, 255, 50" />
+  <Color min ="180, 180, 0" max ="255, 255, 80" />
+</Config>
