@@ -162,6 +162,15 @@ namespace ScreenCaptureToOcrToDic
         [DllImport("User32.dll")]
         private static extern IntPtr GetParent(IntPtr hwnd);
 
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("User32.dll")]
+        private static extern bool ShowWindow(IntPtr handle, int nCmdShow);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
         private static void GkhKeyUp(object sender, KeyEventArgs e)
         {
             // Console.WriteLine("Up\t" + e.KeyCode);
@@ -232,12 +241,13 @@ namespace ScreenCaptureToOcrToDic
             var maxLength = GetWindowTextLength(parentH);
             var windowText = new StringBuilder("", maxLength + 5);
             GetWindowText(parentH, windowText, maxLength + 2);
+            // GetWindowText(h, windowText, maxLength + 2);
             var caption = windowText.ToString();
-            if (caption.Contains("Cemu") == false)
-            {
-                Console.WriteLine("Caption: " + caption);
-                return false;
-            }
+            //if (caption.Contains("Cemu") == false)
+            //{
+                Console.WriteLine("Caption: " + h + ", " + caption);
+            //    return false;
+            //}
 
             GetWindowRect(h, out lpRect);
 
@@ -313,6 +323,21 @@ namespace ScreenCaptureToOcrToDic
                         }
 
                         Process.Start(target);
+
+                        //Process[] processes = Process.GetProcessesByName("Shantae and the Pirate's Curse");
+
+                        //foreach (Process p in processes)
+                        //{
+                        //    ShowWindow(p.MainWindowHandle, 9);
+                        //    SetForegroundWindow(p.MainWindowHandle);
+                        //}
+
+                        // Process.GetProcessesByName("Shantae and the Pirate's Curse");
+                        //var hWnd2 = FindWindow(null, "Shantae and the Pirate's Curse");
+                        //Console.WriteLine("hwnd2: " + hWnd2);
+
+                        //ShowWindow(hWnd2, 9);
+                        //SetForegroundWindow(hWnd2);
                     }
                 }
             }
