@@ -21,8 +21,10 @@ namespace ScreenCaptureToOcrToDic
     {
         // 키를 누르고 있을 때 연속으로 눌리지 않게 하기 위한 꼼수.
         private static readonly Dictionary<Keys, bool> IsPresss = new Dictionary<Keys, bool>();
-
         private static List<Tuple<Scalar, Scalar>> LetterColors = new List<Tuple<Scalar, Scalar>>();
+        private static Dictionary<string, Rect> Areas = new Dictionary<string, Rect>();
+        private static Dictionary<string, Tuple<string, Rect>> Behaviors = new Dictionary<string, Tuple<string, Rect>>();
+
         /// <summary>
         ///     The main entry point for the application.
         /// </summary>
@@ -32,6 +34,16 @@ namespace ScreenCaptureToOcrToDic
 
             // keyboard hook 초기화및 셋팅
             var gkh = new globalKeyboardHook();
+
+            foreach (var key in Behaviors.Keys)
+            {
+                var k = (Keys)char.ToUpper(key[0]);
+
+                //gkh.HookedKeys.Add(k);
+                Console.WriteLine(key + ": " + k);
+            }
+
+            // return;
 
             gkh.HookedKeys.Add(Keys.Q);
             gkh.HookedKeys.Add(Keys.A);
@@ -58,18 +70,32 @@ namespace ScreenCaptureToOcrToDic
 
         private static void InitConfig()
         {
-            const string configFilePath = @".\config.xml";
+            // var configFilePath = @".\config.xml";
+            var configFilePath = @"..\..\config.xml";
+            if (File.Exists(configFilePath) == false)
+            {
+                configFilePath = @"..\..\config.xml";
+                if (File.Exists(configFilePath) == false)
+                {
+                    Console.WriteLine("File is not exists.");
+                }
+            }
 
             var strXml = File.ReadAllText(configFilePath);
 
             var xml = new XmlDocument();
             xml.LoadXml(strXml);
-            var xmlNodes = xml.GetElementsByTagName("Color");
 
-            foreach (XmlNode xn in xmlNodes)
+            var colorNodes = xml.GetElementsByTagName("Color");
+            foreach (XmlNode xn in colorNodes)
             {
-                var minRgb = xn.Attributes["min"].InnerText.Split(',');
-                var maxRgb = xn.Attributes["max"].InnerText.Split(',');
+                if (xn.Attributes == null)
+                {
+                    continue;
+                }
+
+                var minRgb = xn.Attributes["min"].Value.Split(',');
+                var maxRgb = xn.Attributes["max"].Value.Split(',');
 
                 var minr = Convert.ToInt32(minRgb[0]);
                 var ming = Convert.ToInt32(minRgb[1]);
@@ -80,6 +106,39 @@ namespace ScreenCaptureToOcrToDic
                 var maxb = Convert.ToInt32(maxRgb[2]);
 
                 LetterColors.Add(new Tuple<Scalar, Scalar>(new Scalar(minr, ming, minb), new Scalar(maxr, maxg, maxb)));
+            }
+
+            var areaNodes = xml.GetElementsByTagName("Area");
+            foreach (XmlNode xn in areaNodes)
+            {
+                if (xn.Attributes == null)
+                {
+                    continue;
+                }
+
+                var name = xn.Attributes["name"].Value;
+                var srcArea = xn.Attributes["area"].Value.Split(',');
+                var area = new Rect(Convert.ToSingle(srcArea[0]), Convert.ToSingle(srcArea[1]), Convert.ToSingle(srcArea[2]), Convert.ToSingle(srcArea[3]));
+
+                Areas.Add(name, area);
+            }
+
+            var behaviorNodes = xml.GetElementsByTagName("Behavior");
+            foreach (XmlNode xn in behaviorNodes)
+            {
+                if (xn.Attributes == null)
+                {
+                    continue;
+                }
+
+                
+                var key = xn.Attributes["key"].Value;
+                var translate = xn.Attributes["translate"].Value;
+                var area = xn.Attributes["area"].Value;
+
+                Console.WriteLine(key);
+
+                Behaviors.Add(key, new Tuple<string, Rect>(translate, Areas[area]));
             }
         }
 
