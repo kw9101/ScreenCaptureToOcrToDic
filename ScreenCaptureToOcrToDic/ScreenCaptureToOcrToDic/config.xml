@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Config>
+  <WindowCaption name="Shantae and the Pirate's Curse"/>
   <Color name ="white" min ="200, 200, 200" max ="255, 255, 255" />
   <Color name ="red" min ="0, 50, 200" max ="100, 150, 255" />
   <Color name ="green" min ="120, 200, 0" max ="190, 255, 50" />

@@ -19,7 +19,7 @@ namespace ScreenCaptureToOcrToDic
 {
     internal class Program
     {
-        // 키를 누르고 있을 때 연속으로 눌리지 않게 하기 위한 꼼수.
+        private static string WindowCaption;
         private static readonly Dictionary<Keys, bool> IsPresss = new Dictionary<Keys, bool>();
 
         private static readonly Dictionary<string, Tuple<Scalar, Scalar>> LetterColors = new Dictionary<string, Tuple<Scalar, Scalar>>();
@@ -51,7 +51,7 @@ namespace ScreenCaptureToOcrToDic
             Application.Run(new Form1());
         }
 
-        private static void InitConfig(Dictionary<Keys, Func<bool>> toOcrs)
+        private static void InitConfig(IDictionary<Keys, Func<bool>> toOcrs)
         {
             var configFilePath = @".\config.xml";
             if (File.Exists(configFilePath) == false)
@@ -67,6 +67,9 @@ namespace ScreenCaptureToOcrToDic
 
             var xml = new XmlDocument();
             xml.LoadXml(strXml);
+
+            var windowCaptions = xml.GetElementsByTagName("WindowCaption");
+            WindowCaption = windowCaptions[0].Attributes["name"].Value;
 
             var colorNodes = xml.GetElementsByTagName("Color");
             foreach (XmlNode xn in colorNodes)
@@ -229,27 +232,10 @@ namespace ScreenCaptureToOcrToDic
         private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio,
             float crapBottomRatio, IEnumerable<Tuple<Scalar, Scalar>> letterColors)
         {
-            var mousePosition = Control.MousePosition;
+            var hWnd = FindWindow(null, WindowCaption);
 
-            var hWnd = WindowFromPoint(mousePosition);
             Rectangle lpRect;
-
-            var h = new IntPtr(hWnd);
-
-            var parentH = GetParent(h);
-
-            var maxLength = GetWindowTextLength(parentH);
-            var windowText = new StringBuilder("", maxLength + 5);
-            GetWindowText(parentH, windowText, maxLength + 2);
-            // GetWindowText(h, windowText, maxLength + 2);
-            var caption = windowText.ToString();
-            //if (caption.Contains("Cemu") == false)
-            //{
-                Console.WriteLine("Caption: " + h + ", " + caption);
-            //    return false;
-            //}
-
-            GetWindowRect(h, out lpRect);
+            GetWindowRect(hWnd, out lpRect);
 
             const string srcTestImagePath = "./test.png";
             var windowWidth = lpRect.Width - lpRect.X;
@@ -333,11 +319,12 @@ namespace ScreenCaptureToOcrToDic
                         //}
 
                         // Process.GetProcessesByName("Shantae and the Pirate's Curse");
-                        //var hWnd2 = FindWindow(null, "Shantae and the Pirate's Curse");
+                        //var hWnd2 = FindWindow(null, WindowCaption);
                         //Console.WriteLine("hwnd2: " + hWnd2);
 
-                        //ShowWindow(hWnd2, 9);
-                        //SetForegroundWindow(hWnd2);
+                        // ShowWindow(hWnd, 9);
+                        SetForegroundWindow(hWnd);
+                        // ShowWindow(hWnd, 3);
                     }
                 }
             }
