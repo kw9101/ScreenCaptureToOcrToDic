@@ -263,7 +263,7 @@ namespace ScreenCaptureToOcrToDic
             var letterFilter = new Mat(new[] {src.Width, src.Height}, MatType.CV_16U);
             var tempColorLetterfilter = new Mat(new[] {src.Width, src.Height}, MatType.CV_16U);
 
-            Cv2.InRange(src, 0, 0, letterFilter);
+            Cv2.InRange(src, 1, 0, letterFilter);
             foreach (var letterColor in letterColors)
             {
                 Cv2.InRange(src, letterColor.Item1, letterColor.Item2, tempColorLetterfilter);
@@ -309,27 +309,34 @@ namespace ScreenCaptureToOcrToDic
                         }
 
                         Process.Start(target);
-
-                        //Process[] processes = Process.GetProcessesByName("Shantae and the Pirate's Curse");
-
-                        //foreach (Process p in processes)
-                        //{
-                        //    ShowWindow(p.MainWindowHandle, 9);
-                        //    SetForegroundWindow(p.MainWindowHandle);
-                        //}
-
-                        // Process.GetProcessesByName("Shantae and the Pirate's Curse");
-                        //var hWnd2 = FindWindow(null, WindowCaption);
-                        //Console.WriteLine("hwnd2: " + hWnd2);
-
-                        // ShowWindow(hWnd, 9);
-                        SetForegroundWindow(hWnd);
-                        // ShowWindow(hWnd, 3);
                     }
                 }
             }
 
+            SetForegroundWindow(hWnd);
+            ShowWindow(hWnd, 9);
+
             return true;
+        }
+
+        /// <summary>
+        /// Delay 함수 MS
+        /// </summary>
+        /// <param name="MS">(단위 : MS)
+        ///
+        private static DateTime Delay(int MS)
+        {
+            DateTime ThisMoment = DateTime.Now;
+            TimeSpan duration = new TimeSpan(0, 0, 0, 0, MS);
+            DateTime AfterWards = ThisMoment.Add(duration);
+
+            while (AfterWards >= ThisMoment)
+            {
+                System.Windows.Forms.Application.DoEvents();
+                ThisMoment = DateTime.Now;
+            }
+
+            return DateTime.Now;
         }
 
         private struct Rect

@@ -1,28 +1,35 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Config>
   <WindowCaption name="Shantae and the Pirate's Curse"/>
-  <Color name ="white" min ="200, 200, 200" max ="255, 255, 255" />
+  <!--<Color name ="white" min ="200, 200, 200" max ="255, 255, 255" />
   <Color name ="red" min ="0, 50, 200" max ="100, 150, 255" />
   <Color name ="green" min ="120, 200, 0" max ="190, 255, 50" />
   <Color name ="blue" min ="180, 180, 0" max ="255, 255, 80" />
-
+  <Color name ="yellow" min ="0, 200, 200" max ="100, 255, 255" />-->
+  <Color name ="white" min ="255, 255, 255" max ="255, 255, 255" />
+  <Color name ="yellow" min ="0, 255, 255" max ="0, 255, 255" />
+  
   <Area name="top" area ="0.22, 0.22, 0.1, 0.66"/>
   <Area name="middle" area ="0.22, 0.22, 0.39, 0.39"/>
   <Area name="bottom" area ="0.22, 0.22, 0.66, 0.1"/>
   
   <Area name="sleft" area ="0.12, 0.46, 0.22, 0.61"/>
+  <Area name="scenter" area ="0.12, 0.14, 0.22, 0.61"/>
   <Area name="sright" area ="0.44, 0.14, 0.22, 0.61"/>
-
+  
   <Behavior key="q" translate="GoogleInQuotes" areas="sleft" colors="all"/>/>
-  <Behavior key="w" translate="GoogleInQuotes" areas="sright" colors="all"/>/>
+  <Behavior key="w" translate="GoogleInQuotes" areas="scenter" colors="all"/>/>
+  <Behavior key="e" translate="GoogleInQuotes" areas="sright" colors="all"/>/>
 
   <Behavior key="a" translate="Google" areas="sleft" colors="all"/>/>
-  <Behavior key="s" translate="Google" areas="sright" colors="all"/>/>
+  <Behavior key="s" translate="Google" areas="scenter" colors="all"/>/>
+  <Behavior key="d" translate="Google" areas="sright" colors="all"/>/>
 
   <Behavior key="z" translate="Naver" areas="sleft" colors="all"/>/>
-  <Behavior key="x" translate="Naver" areas="sright" colors="all"/>/>
-
-  <!--<Behavior key="1" translate="GoogleInQuotes" areas="bottom, top, middle" colors="all"/>
+  <Behavior key="x" translate="Naver" areas="scenter" colors="all"/>/>
+  <Behavior key="c" translate="Naver" areas="sright" colors="all"/>/>
+  
+<!--<Behavior key="1" translate="GoogleInQuotes" areas="bottom, top, middle" colors="all"/>
   <Behavior key="q" translate="GoogleInQuotes" areas="sright" colors="all"/>/>
   <Behavior key="a" translate="GoogleInQuotes" areas="middle" colors="all"/>/>
   <Behavior key="z" translate="GoogleInQuotes" areas="bottom" colors="all"/>/>
