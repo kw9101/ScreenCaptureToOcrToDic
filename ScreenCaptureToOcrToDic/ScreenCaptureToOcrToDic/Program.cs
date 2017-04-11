@@ -53,10 +53,10 @@ namespace ScreenCaptureToOcrToDic
 
         private static void InitConfig(IDictionary<Keys, Func<bool>> toOcrs)
         {
-            var configFilePath = @".\config.xml";
+            var configFilePath = @"..\..\config.xml";
             if (File.Exists(configFilePath) == false)
             {
-                configFilePath = @"..\..\config.xml";
+                configFilePath = @".\config.xml";
                 if (File.Exists(configFilePath) == false)
                 {
                     Console.WriteLine("File is not exists.");
@@ -232,7 +232,11 @@ namespace ScreenCaptureToOcrToDic
         private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio,
             float crapBottomRatio, IEnumerable<Tuple<Scalar, Scalar>> letterColors)
         {
-            var hWnd = FindWindow(null, WindowCaption);
+            // var hWnd = FindWindow(null, WindowCaption);
+
+            var mousePosition = Control.MousePosition;
+            var h = WindowFromPoint(mousePosition);
+            var hWnd = new IntPtr(h);
 
             Rectangle lpRect;
             GetWindowRect(hWnd, out lpRect);
