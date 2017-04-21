@@ -28,6 +28,8 @@ namespace ScreenCaptureToOcrToDic
 
         private static readonly Dictionary<Keys, Func<bool>> ToOcrs = new Dictionary<Keys, Func<bool>>();
 
+        private static IntPtr HWnd = IntPtr.Zero;
+
         /// <summary>
         ///     The main entry point for the application.
         /// </summary>
@@ -51,6 +53,10 @@ namespace ScreenCaptureToOcrToDic
             Application.Run(new Form1());
         }
 
+        /// <summary>
+        /// xml 파일을 읽어 프로그램을 초기화 한다.
+        /// </summary>
+        /// <param name="toOcrs"></param>
         private static void InitConfig(IDictionary<Keys, Func<bool>> toOcrs)
         {
             var configFilePath = @"..\..\config.xml";
@@ -91,8 +97,7 @@ namespace ScreenCaptureToOcrToDic
                 var maxg = Convert.ToInt32(maxRgb[1]);
                 var maxb = Convert.ToInt32(maxRgb[2]);
 
-                LetterColors.Add(name,
-                    new Tuple<Scalar, Scalar>(new Scalar(minr, ming, minb), new Scalar(maxr, maxg, maxb)));
+                LetterColors.Add(name, new Tuple<Scalar, Scalar>(new Scalar(minr, ming, minb), new Scalar(maxr, maxg, maxb)));
             }
 
             var areaNodes = xml.GetElementsByTagName("Area");
@@ -188,6 +193,27 @@ namespace ScreenCaptureToOcrToDic
 
         private static void GkhKeyDown(object sender, KeyEventArgs e)
         {
+            // 윈도우 지정
+            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+            {
+                if ((Control.ModifierKeys & Keys.Alt) == Keys.Alt)
+                {
+                    if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
+                    {
+                        if (e.KeyCode == Keys.Q)
+                        {
+                            var mousePosition = Control.MousePosition;
+                            var h = WindowFromPoint(mousePosition);
+                            HWnd = new IntPtr(h);
+
+                            Console.WriteLine("지정 윈도우: " + HWnd);
+
+                            return;
+                        }
+                    }
+                }
+            }
+
             bool isPress;
             if (IsPresss.TryGetValue(e.KeyCode, out isPress) == false)
             {
@@ -215,11 +241,10 @@ namespace ScreenCaptureToOcrToDic
                 }
             }
 
-            return hWnd; //Should contain the handle but may be zero if the title doesn't match
+            return hWnd; //Should contain the handle but may be zero if the title doesn't matchsda
         }
 
-        private static bool ToOcr(Translator translator, IEnumerable<Rect> crapRatios,
-            IEnumerable<Tuple<Scalar, Scalar>> letterColors)
+        private static bool ToOcr(Translator translator, IEnumerable<Rect> crapRatios, IEnumerable<Tuple<Scalar, Scalar>> letterColors)
         {
             foreach (var crapRatio in crapRatios)
             {
@@ -229,14 +254,20 @@ namespace ScreenCaptureToOcrToDic
             return false;
         }
 
-        private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio,
-            float crapBottomRatio, IEnumerable<Tuple<Scalar, Scalar>> letterColors)
+        private static bool ToOcr(Translator translator, float crapLeftRatio, float crapRightRatio, float crapTopRatio, float crapBottomRatio, IEnumerable<Tuple<Scalar, Scalar>> letterColors)
         {
             // var hWnd = FindWindow(null, WindowCaption);
-
             var mousePosition = Control.MousePosition;
             var h = WindowFromPoint(mousePosition);
+
             var hWnd = new IntPtr(h);
+
+            // 미리지정한 윈도우가 있고 현 마우스 커서가 그 윈도우 안이 아니라면 return
+            if (HWnd != IntPtr.Zero && HWnd != hWnd)
+            {
+                Console.WriteLine(HWnd + " != " + hWnd);
+                return false;
+            }
 
             Rectangle lpRect;
             GetWindowRect(hWnd, out lpRect);
@@ -256,8 +287,7 @@ namespace ScreenCaptureToOcrToDic
             var bitmap = new Bitmap(crapWidth, crapHeight);
             var graphics = Graphics.FromImage(bitmap);
 
-            graphics.CopyFromScreen(new Point(lpRect.X + crapLeft, lpRect.Y + crapTop), new Point(0, 0),
-                new Size(crapWidth, crapHeight));
+            graphics.CopyFromScreen(new Point(lpRect.X + crapLeft, lpRect.Y + crapTop), new Point(0, 0), new Size(crapWidth, crapHeight));
             bitmap.Save(srcTestImagePath, ImageFormat.Png);
             graphics.Dispose();
 
